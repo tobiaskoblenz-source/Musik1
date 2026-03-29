@@ -96,6 +96,21 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     } catch {}
   }
 
+  async function onDelete(id) {
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await fetch('/api/requests', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      flash('Wunsch entfernt');
+    } catch {
+      flash('Entfernen fehlgeschlagen');
+    }
+  }
+
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(guestUrl);
@@ -216,7 +231,18 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                     <div className="request-meta">{item.artist}</div>
                     <div className="request-submeta">von {item.guest_name} · {item.created_at}</div>
                   </div>
-                  <div className="request-id">#{item.id}</div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div className="request-id">#{item.id}</div>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => onDelete(item.id)}
+                      style={{ width: 38, minWidth: 38, height: 38, padding: 0, borderRadius: 14 }}
+                      aria-label="Wunsch entfernen"
+                      title="Wunsch entfernen"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
                 <div className="request-actions">
                   <button className="btn btn-secondary" onClick={() => onStatusChange(item.id, 'accepted')}>Annehmen</button>

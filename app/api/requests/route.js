@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addRequest, getRequests, updateRequestStatus } from '../../../data/store';
+import { addRequest, deleteRequest, getRequests, updateRequestStatus } from '../../../data/store';
 
 export async function GET() {
   return NextResponse.json({ requests: getRequests() });
@@ -22,5 +22,12 @@ export async function POST(request) {
 export async function PATCH(request) {
   const body = await request.json();
   updateRequestStatus(body.id, body.status);
+  return NextResponse.json({ ok: true, requests: getRequests() });
+}
+
+
+export async function DELETE(request) {
+  const body = await request.json();
+  deleteRequest(body.id);
   return NextResponse.json({ ok: true, requests: getRequests() });
 }

@@ -44,3 +44,9 @@ export function updateEvent(patch) {
   event = { ...event, ...patch };
   return event;
 }
+
+
+export function deleteRequest(id) {
+  requests = requests.filter((r) => r.id !== String(id));
+  return requests;
+}

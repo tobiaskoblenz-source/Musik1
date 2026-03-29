@@ -25,3 +25,7 @@ Im Dashboard gibt es rechts den Button **QR speichern**. Damit wird der QR-Code 
 
 ## Wünsche im Dashboard
 Diese Version sendet Wünsche lokal an eine kleine API im laufenden Server-Speicher. Solange `npm run dev` läuft, erscheinen neue Wünsche im Dashboard.
+
+
+## Wünsche entfernen
+Im Dashboard hat jede Wunschkarte oben rechts ein **X**, um den Eintrag direkt zu löschen.
