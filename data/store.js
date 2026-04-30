@@ -1,7 +1,7 @@
 let event = {
   id: "1",
   name: "Birthday Bash @ Club Room",
-  code: "PARTY-2026",
+  code: "TANZ",
   isActive: true,
 };
 

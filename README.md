@@ -11,7 +11,7 @@ npm run dev
 Dann öffnen:
 - http://localhost:3000
 - http://localhost:3000/dashboard
-- http://localhost:3000/e/PARTY-2026
+- http://localhost:3000/e/TANZ
 - http://localhost:3000/login
 
 

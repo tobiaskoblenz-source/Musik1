@@ -23,7 +23,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [filter, setFilter] = useState('all');
   const [notice, setNotice] = useState('');
   const [eventName, setEventName] = useState(initialEvent?.name || 'Birthday Bash @ Club Room');
-  const [eventCode, setEventCode] = useState(initialEvent?.code || 'PARTY-2026');
+  const [eventCode, setEventCode] = useState(initialEvent?.code || 'TANZ');
   const [guestLimit, setGuestLimit] = useState('3 pro Gast');
   const [eventStatus, setEventStatus] = useState(initialEvent?.isActive ? 'Aktiv' : 'Pausiert');
 

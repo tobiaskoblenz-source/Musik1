@@ -8,7 +8,7 @@ export default function HomePage() {
         <p className="hero-sub">Lokale Version im Stil der ersten App. Ohne Supabase, ohne Login, ohne Deploy-Stress.</p>
         <div className="hero-actions">
           <Link href="/dashboard" className="btn btn-primary">Dashboard öffnen</Link>
-          <Link href="/e/PARTY-2026" className="btn btn-secondary">Gast-Seite</Link>
+          <Link href="/e/TANZ" className="btn btn-secondary">Gast-Seite</Link>
           <Link href="/login" className="btn btn-ghost">Login Demo</Link>
         </div>
       </div>
