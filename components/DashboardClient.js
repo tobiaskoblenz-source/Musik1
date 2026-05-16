@@ -169,21 +169,11 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
             <div className="field-grid">
               <div className="full">
                 <label className="label">Eventname</label>
-                <input
-                  className="input"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)}
-                />
+                <input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)} />
               </div>
               <div>
                 <label className="label">Event-Code</label>
-                <input
-                  className="input"
-                  value={eventCode}
-                  onChange={(e) => setEventCode(e.target.value.toUpperCase())}
-                  onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)}
-                />
+                <input className="input" value={eventCode} onChange={(e) => setEventCode(e.target.value.toUpperCase())} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)} />
               </div>
               <div>
                 <label className="label">Gäste-Seite</label>
@@ -194,12 +184,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
           <div className="panel panel-pad">
             <div className="toolbar">
-              <input
-                className="input"
-                placeholder="Suche nach Song, Artist oder Gast"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <input className="input" placeholder="Suche nach Song, Artist oder Gast" value={search} onChange={(e) => setSearch(e.target.value)} />
               <div className="filter-row">
                 <button className="btn btn-secondary" onClick={() => setFilter('all')}>Alle</button>
                 <button className="btn btn-secondary" onClick={() => setFilter('open')}>Offen</button>
