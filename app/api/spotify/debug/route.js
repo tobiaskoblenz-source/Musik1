@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'dashboard-spotify-playlist-box-2026-05-17-v25',
+    buildVersion: 'dashboard-spotify-playlist-local-fallback-2026-05-17-v26',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',

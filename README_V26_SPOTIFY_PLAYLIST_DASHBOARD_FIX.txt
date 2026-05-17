@@ -1,0 +1,1 @@
+v26: Spotify Playlist Box liest bei 403 nicht mehr hart Spotify aus, sondern zeigt eine lokale App-Liste der hinzugefügten Songs. Hinzufügen zur Spotify Playlist bleibt unverändert. BuildVersion: dashboard-spotify-playlist-local-fallback-2026-05-17-v26

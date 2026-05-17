@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'dashboard-spotify-playlist-box-2026-05-17-v25';
+const BUILD_VERSION = 'dashboard-spotify-playlist-local-fallback-2026-05-17-v26';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -258,6 +258,26 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
   const lastPlaylistLog = logs.find((log) => log.area.toLowerCase().includes('spotify playlist') && log.type !== 'error' && log.message.toLowerCase().includes('hinzugefügt'));
+
+  function getLocalPlaylistItemsFromLogs() {
+    return logs
+      .filter((log) => log.area.toLowerCase().includes('spotify playlist') && log.type !== 'error' && log.message.toLowerCase().includes('hinzugefügt'))
+      .map((log, index) => {
+        const raw = String(log.message || '').replace(/^Hinzugefügt:\s*/i, '');
+        const [namePart, playlistPart] = raw.split('→').map((part) => part.trim());
+        const details = String(log.details || '');
+        const query = details.split('|')[0]?.trim() || '';
+        const uriMatch = details.match(/Track-URI:\s*([^|]+)/i);
+        const idMatch = details.match(/Track-ID:\s*([^|]+)/i);
+        return {
+          id: (idMatch?.[1] || `local-${index}`).trim(),
+          name: namePart || query || 'Spotify Song',
+          artist: query && namePart && query !== namePart ? query.replace(namePart, '').trim() : 'Aus App hinzugefügt',
+          uri: (uriMatch?.[1] || '').trim(),
+          url: idMatch?.[1] ? `https://open.spotify.com/track/${idMatch[1].trim()}` : ''
+        };
+      });
+  }
   const filterButtons = [
     ['all', 'Alle', stats.total],
     ['open', 'Offen', stats.open],
@@ -629,8 +649,23 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       if (showFlash) flash('Spotify Playlist geladen');
       addLog('Spotify Playlist', `Playlist-Inhalt geladen: ${selectedPlaylist?.name || selectedPlaylistId}`, 'info', `${items.length} angezeigt · Gesamt: ${typeof data.total === 'number' ? data.total : items.length}`);
     } catch (error) {
-      addLog('Spotify Playlist', error.message || 'Playlist konnte nicht geladen werden', 'error', `Playlist-ID: ${selectedPlaylistId}`);
-      if (showFlash) flash('Playlist laden fehlgeschlagen');
+      const message = error.message || 'Playlist konnte nicht geladen werden';
+      const isSpotifyReadForbidden = message.includes('403') || message.toLowerCase().includes('forbidden') || message.toLowerCase().includes('insufficient client scope');
+      if (isSpotifyReadForbidden) {
+        const localItems = getLocalPlaylistItemsFromLogs();
+        setPlaylistItems(localItems);
+        setPlaylistTotal(localItems.length);
+        addLog(
+          'Spotify Playlist',
+          'Spotify Playlist kann nicht direkt ausgelesen werden – App-Liste wird angezeigt',
+          'info',
+          `Spotify meldet 403 beim Lesen. Hinzufügen funktioniert trotzdem. Playlist-ID: ${selectedPlaylistId} | Lokale Einträge: ${localItems.length}`
+        );
+        if (showFlash) flash('App-Liste wird angezeigt');
+      } else {
+        addLog('Spotify Playlist', message, 'error', `Playlist-ID: ${selectedPlaylistId}`);
+        if (showFlash) flash('Playlist laden fehlgeschlagen');
+      }
     } finally {
       setPlaylistItemsLoading(false);
     }
@@ -783,10 +818,17 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         'info',
         `${buildQuery(item)} | Quelle: ${track.source === 'guest-selection' ? 'Gäste-Spotify-Auswahl' : 'Dashboard-Suche'} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
       );
+      setPlaylistItems((prev) => [{
+        id: track.id || track.uri,
+        name: track.name || buildQuery(item),
+        artist: (track.artists || []).map((a) => a.name).filter(Boolean).join(', ') || item.artist || 'Aus App hinzugefügt',
+        uri: track.uri,
+        url: track.external_urls?.spotify || ''
+      }, ...prev.filter((entry) => entry.uri !== track.uri)].slice(0, 20));
+      setPlaylistTotal((prev) => typeof prev === 'number' ? prev + 1 : 1);
       await onStatusChange(item.id, 'accepted', { skipAutoPlaylist: true });
       addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
       flash('Zur Spotify Playlist hinzugefügt und als angenommen markiert');
-      await loadSpotifyPlaylistItems(false);
     } catch (error) {
       const playlist = playlists.find((p) => p.id === selectedPlaylistId);
       let trackInfo = 'Track-URI: -';
@@ -1228,7 +1270,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
               <div className="playlist-summary-card">
                 <span>Aktive Playlist</span>
                 <strong>{selectedPlaylist?.name || 'Bitte in Spotify auswählen'}</strong>
-                <small>{playlistTotal !== null ? `${playlistTotal} Songs in Spotify` : selectedPlaylistId ? 'Noch nicht geladen' : 'Keine Playlist aktiv'}</small>
+                <small>{playlistTotal !== null ? `${playlistTotal} Songs angezeigt` : selectedPlaylistId ? 'Noch nicht geladen' : 'Keine Playlist aktiv'}</small>
               </div>
               <div className="playlist-summary-card">
                 <span>Zuletzt hinzugefügt</span>
@@ -1236,7 +1278,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <small>{lastPlaylistLog?.time || 'Noch kein Eintrag'}</small>
               </div>
               <div className="playlist-actions-card">
-                <button className="btn btn-secondary" disabled={!spotifyConnected || !selectedPlaylistId || playlistItemsLoading} onClick={() => loadSpotifyPlaylistItems(true)}>{playlistItemsLoading ? 'Lädt...' : 'Neu laden'}</button>
+                <button className="btn btn-secondary" disabled={!spotifyConnected || !selectedPlaylistId || playlistItemsLoading} onClick={() => loadSpotifyPlaylistItems(true)}>{playlistItemsLoading ? 'Lädt...' : 'Liste laden'}</button>
                 <button className="btn btn-secondary" disabled={!selectedPlaylistId} onClick={openSelectedPlaylist}>Spotify öffnen</button>
                 <button className="btn btn-primary" disabled={!selectedPlaylistId} onClick={() => setPlaylistViewOpen((v) => !v)}>{playlistViewOpen ? 'Liste ausblenden' : 'Playlist anzeigen'}</button>
               </div>
@@ -1250,7 +1292,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                     <small>{track.artist}</small>
                   </div>
                 )) : (
-                  <div className="empty-column">Noch keine Playlist-Daten geladen. Klicke auf „Neu laden“.</div>
+                  <div className="empty-column">Noch keine App-Playlist-Daten geladen. Klicke auf „Liste laden“ oder füge einen Wunsch zur Playlist hinzu.</div>
                 )}
               </div>
             ) : null}
