@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-deploy-proof-2026-05-17-v2';
+const BUILD_VERSION = 'spotify-server-login-fix-2026-05-17-v3';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -256,27 +256,11 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
   async function spotifyLogin() {
     try {
-      const config = getSpotifyConfig();
-      if (!config.clientId) throw new Error('NEXT_PUBLIC_SPOTIFY_CLIENT_ID fehlt bei Railway');
-      if (!config.redirectUri) throw new Error('NEXT_PUBLIC_SPOTIFY_REDIRECT_URI fehlt bei Railway');
-
-      const verifier = randomString();
-      const challenge = await createCodeChallenge(verifier);
+      // Server-Login erzwingt die richtige Railway Redirect URI und kann nicht mehr auf localhost fallen.
+      localStorage.removeItem(VERIFIER_KEY);
       localStorage.removeItem(REDIRECT_KEY);
-      localStorage.setItem(VERIFIER_KEY, verifier);
-      localStorage.setItem(REDIRECT_KEY, config.redirectUri);
-
-      const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: config.clientId,
-        scope: config.scopes,
-        code_challenge_method: 'S256',
-        code_challenge: challenge,
-        redirect_uri: config.redirectUri
-      });
-
-      addLog('Spotify Login', 'Weiterleitung zu Spotify gestartet', 'info');
-      window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+      addLog('Spotify Login', 'Weiterleitung über /api/spotify/login gestartet', 'info');
+      window.location.href = '/api/spotify/login';
     } catch (error) {
       addLog('Spotify Login', error.message || 'Login fehlgeschlagen', 'error');
       flash('Spotify Login fehlgeschlagen');
@@ -458,7 +442,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className="btn btn-secondary" onClick={() => setActivePage('dashboard')}>Dashboard</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('errors')}>Fehler-Log</button>
-          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v2</button>
+          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v3</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
       </div>

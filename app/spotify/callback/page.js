@@ -43,6 +43,20 @@ export default function SpotifyCallbackPage() {
         const error = params.get('error');
 
         if (error) throw new Error(`Spotify Login abgebrochen: ${error}`);
+        const serverToken = params.get('spotify_token');
+        if (serverToken) {
+          const normalized = serverToken.replace(/-/g, '+').replace(/_/g, '/');
+          const json = decodeURIComponent(escape(window.atob(normalized)));
+          const tokenData = JSON.parse(json);
+          localStorage.setItem(TOKEN_KEY, JSON.stringify(tokenData));
+          localStorage.removeItem(VERIFIER_KEY);
+          localStorage.removeItem(REDIRECT_KEY);
+          addLog('Spotify Login', 'Spotify Login erfolgreich über Server-Callback', 'info');
+          setMessage('Spotify Login erfolgreich. Du wirst zurück zum Dashboard geleitet ...');
+          setTimeout(() => { window.location.href = '/dashboard'; }, 900);
+          return;
+        }
+
         if (!code) throw new Error('Kein Spotify Code in der Callback URL gefunden');
 
         const verifier = localStorage.getItem(VERIFIER_KEY);
