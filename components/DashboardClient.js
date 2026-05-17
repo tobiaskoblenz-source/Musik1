@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-playlist-owner-scope-fix-2026-05-17-v6';
+const BUILD_VERSION = 'spotify-playlist-add-items-diagnostic-2026-05-17-v7';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -426,11 +426,32 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   async function findSpotifyTrack(item) {
     const query = buildQuery(item);
     if (!query) throw new Error('Song oder Artist fehlt');
-    const params = new URLSearchParams({ q: query, type: 'track', limit: '1' });
+    const params = new URLSearchParams({ q: query, type: 'track', limit: '3' });
     const data = await spotifyFetch(`https://api.spotify.com/v1/search?${params.toString()}`);
-    const track = data?.tracks?.items?.[0];
+    const tracks = data?.tracks?.items || [];
+    const track = tracks.find((entry) => entry?.type === 'track' && entry?.uri?.startsWith('spotify:track:')) || tracks[0];
     if (!track) throw new Error(`Kein Spotify Treffer gefunden: ${query}`);
+    if (!track.uri || !track.uri.startsWith('spotify:track:')) {
+      throw new Error(`Spotify Treffer hat keine gültige Track-URI: ${track.uri || '-'}`);
+    }
     return track;
+  }
+
+  async function getSpotifyPlaylistDetails(playlistId) {
+    return spotifyFetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}?fields=id,name,public,collaborative,owner(id,display_name),snapshot_id`);
+  }
+
+  async function addTrackUriToPlaylist(playlistId, trackUri) {
+    if (!trackUri || !trackUri.startsWith('spotify:track:')) {
+      throw new Error(`Ungültige Track-URI für Playlist: ${trackUri || '-'}`);
+    }
+
+    // Hauptweg: Spotify erwartet beim Hinzufügen eine Track-URI im Feld "uris".
+    // Wir nutzen bewusst /tracks, weil dieser Add-Items-Endpunkt bei Spotify stabil funktioniert.
+    return spotifyFetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ uris: [trackUri], position: 0 })
+    });
   }
 
   async function openInSpotify(item) {
@@ -460,22 +481,33 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
       const playlist = playlists.find((p) => p.id === selectedPlaylistId);
       const user = spotifyUser || await spotifyFetch('https://api.spotify.com/v1/me');
-      if (playlist && playlist.public !== true) throw new Error('Die gewählte Playlist ist nicht öffentlich');
-      if (playlist && playlist.owner?.id !== user?.id && playlist.collaborative !== true) {
-        throw new Error(`Diese Playlist gehört nicht deinem eingeloggten Spotify-Konto. Owner: ${playlist.owner?.id || '-'} | Du: ${user?.id || '-'}`);
+      const playlistDetails = await getSpotifyPlaylistDetails(selectedPlaylistId);
+      const effectivePlaylist = playlistDetails || playlist;
+      if (effectivePlaylist && effectivePlaylist.public !== true) throw new Error('Die gewählte Playlist ist nicht öffentlich');
+      if (effectivePlaylist && effectivePlaylist.owner?.id !== user?.id && effectivePlaylist.collaborative !== true) {
+        throw new Error(`Diese Playlist gehört nicht deinem eingeloggten Spotify-Konto. Owner: ${effectivePlaylist.owner?.id || '-'} | Du: ${user?.id || '-'}`);
       }
 
       const track = await findSpotifyTrack(item);
-      await spotifyFetch(`https://api.spotify.com/v1/playlists/${selectedPlaylistId}/tracks`, {
-        method: 'POST',
-        body: JSON.stringify({ uris: [track.uri] })
-      });
-      const playlistName = playlist?.name || 'ausgewählte Playlist';
-      addLog('Spotify Playlist', `Hinzugefügt: ${track.name} → ${playlistName}`, 'info', `${buildQuery(item)} | Playlist-ID: ${selectedPlaylistId}`);
+      const result = await addTrackUriToPlaylist(selectedPlaylistId, track.uri);
+      const playlistName = effectivePlaylist?.name || playlist?.name || 'ausgewählte Playlist';
+      addLog(
+        'Spotify Playlist',
+        `Hinzugefügt: ${track.name} → ${playlistName}`,
+        'info',
+        `${buildQuery(item)} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
+      );
       flash('Zur Spotify Playlist hinzugefügt');
     } catch (error) {
       const playlist = playlists.find((p) => p.id === selectedPlaylistId);
-      const details = `${buildQuery(item)} | Playlist: ${playlist?.name || '-'} | Owner: ${playlist?.owner?.id || '-'} | Public: ${playlist?.public} | Collaborative: ${playlist?.collaborative} | Token-Scopes: ${getTokenScopes().join(' ') || '-'}`;
+      let trackInfo = 'Track-URI: -';
+      try {
+        const debugTrack = await findSpotifyTrack(item);
+        trackInfo = `Track: ${debugTrack.name || '-'} | Track-URI: ${debugTrack.uri || '-'} | Track-ID: ${debugTrack.id || '-'}`;
+      } catch (trackError) {
+        trackInfo = `Track-Suche Fehler: ${trackError.message || trackError}`;
+      }
+      const details = `${buildQuery(item)} | ${trackInfo} | Playlist-ID: ${selectedPlaylistId || '-'} | Playlist: ${playlist?.name || '-'} | Owner: ${playlist?.owner?.id || '-'} | Public: ${playlist?.public} | Collaborative: ${playlist?.collaborative} | Token-Scopes: ${getTokenScopes().join(' ') || '-'}`;
       addLog('Spotify Playlist', error.message || 'Hinzufügen fehlgeschlagen', 'error', details);
       flash('Playlist hinzufügen fehlgeschlagen');
       setActivePage('errors');
