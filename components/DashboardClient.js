@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-server-login-fix-2026-05-17-v3';
+const BUILD_VERSION = 'spotify-client-callback-fix-2026-05-17-v5';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';

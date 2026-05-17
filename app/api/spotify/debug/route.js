@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'spotify-login-fallback-2026-05-17-v4',
+    buildVersion: 'spotify-client-callback-fix-2026-05-17-v5',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -10,6 +10,7 @@ export async function GET() {
     scopes: process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public',
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
-    loginPage: '/spotify/login'
+    loginPage: '/spotify/login',
+    note: 'API callback leitet Code nur an /spotify/callback weiter; Token-Tausch passiert im Browser mit localStorage Code-Verifier.'
   });
 }
