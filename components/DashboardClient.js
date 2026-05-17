@@ -30,11 +30,8 @@ function statusLabel(status) {
 }
 
 function getSpotifyConfig() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const envAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '';
-  const cleanAppUrl = envAppUrl && !envAppUrl.includes('localhost') ? envAppUrl.replace(/\/$/, '') : '';
-  const baseUrl = origin && !origin.includes('localhost') ? origin : cleanAppUrl;
-  const redirectUri = baseUrl ? `${baseUrl}/api/spotify/callback` : '';
+  // Fester Railway-Redirect, damit Spotify niemals wieder localhost:8080 bekommt.
+  const redirectUri = 'https://musik1-production.up.railway.app/api/spotify/callback';
 
   return {
     clientId: process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '',

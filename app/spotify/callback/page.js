@@ -23,13 +23,8 @@ function addLog(area, message, type = 'info', details = '') {
 }
 
 function getConfig() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const storedRedirect = typeof window !== 'undefined' ? localStorage.getItem(REDIRECT_KEY) : '';
-  const envAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '';
-  const cleanAppUrl = envAppUrl && !envAppUrl.includes('localhost') ? envAppUrl.replace(/\/$/, '') : '';
-  const baseUrl = origin && !origin.includes('localhost') ? origin : cleanAppUrl;
-  const runtimeRedirect = baseUrl ? `${baseUrl}/api/spotify/callback` : '';
-  const redirectUri = storedRedirect && !storedRedirect.includes('localhost') ? storedRedirect : runtimeRedirect;
+  // Muss exakt dieselbe Redirect URI sein, die beim Spotify Login gesendet wurde.
+  const redirectUri = 'https://musik1-production.up.railway.app/api/spotify/callback';
 
   return {
     clientId: process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '',
