@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'dashboard-clean-no-drag-columns-2026-05-17-v20';
+const BUILD_VERSION = 'settings-page-clean-dashboard-2026-05-17-v21';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -871,12 +871,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
         <div className="topbar-actions">
           <button className={activePage === 'dashboard' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('dashboard')}>Dashboard</button>
-          <button className={activePage === 'spotify' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('spotify')}>Spotify</button>
+          <button className={activePage === 'settings' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('settings')}>Einstellungen</button>
           <button className={activePage === 'errors' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('errors')}>Fehler-Log</button>
-          <button className={djMode ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus AUS' : 'DJ-Modus'}</button>
-          <button className={soundEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleSound}>{soundEnabled ? 'Ton EIN' : 'Ton AUS'}</button>
-          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
-          <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
       </div>
 
@@ -1001,6 +997,134 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         </div>
       ) : null}
 
+
+      {activePage === 'settings' ? (
+        <div className="dashboard-grid settings-page-grid">
+          <div className="stack">
+            <div className="panel panel-pad">
+              <div className="section-head">
+                <h2 className="section-title">Event Übersicht</h2>
+                <span className="badge badge-soft">{guestPageStatus}</span>
+              </div>
+
+              <div className="field-grid" style={{ marginTop: 16 }}>
+                <div className="full">
+                  <label className="label">Eventname</label>
+                  <input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
+                </div>
+                <div>
+                  <label className="label">Event-Code</label>
+                  <input className="input" value={eventCode} onChange={(e) => setEventCode(e.target.value.toUpperCase())} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
+                </div>
+                <div>
+                  <label className="label">Gäste-Seite</label>
+                  <input className="input" value={guestPageStatus} readOnly />
+                </div>
+              </div>
+
+              <div className="info-list" style={{ marginTop: 16 }}>
+                <div className="info-row"><span>Seite</span><span>{guestPageStatus === 'EIN' ? 'Wunschformular sichtbar' : 'Geschlossen-Seite sichtbar'}</span></div>
+                <div className="info-row"><span>Jetzt läuft</span><span>{showNowPlaying ? 'Sichtbar' : 'Aus'}</span></div>
+                <div className="info-row"><span>Warteliste</span><span>{showGuestQueue ? 'Sichtbar' : 'Aus'}</span></div>
+                <div className="info-row"><span>Aktuell gespielt</span><span>{nowPlaying ? `${nowPlaying.song_title} - ${nowPlaying.artist}` : '-'}</span></div>
+              </div>
+
+              <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                <button className="btn btn-secondary btn-block" onClick={toggleGuestPage}>{guestPageStatus === 'EIN' ? 'Gäste-Seite ausschalten' : 'Gäste-Seite einschalten'}</button>
+                <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('nowPlaying')}>{showNowPlaying ? 'Jetzt-läuft-Anzeige ausblenden' : 'Jetzt-läuft-Anzeige anzeigen'}</button>
+                <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('queue')}>{showGuestQueue ? 'Warteliste für Gäste ausblenden' : 'Warteliste für Gäste anzeigen'}</button>
+              </div>
+
+              <div className="guest-settings-box">
+                <label className="label">Text, wenn Gäste-Seite AUS ist</label>
+                <textarea className="input textarea" value={closedMessage} onChange={(e) => setClosedMessage(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
+                <div className="preset-grid">
+                  {CLOSED_MESSAGE_PRESETS.map((message) => (
+                    <button className="btn btn-secondary" key={message} type="button" onClick={() => applyClosedMessage(message)}>{message}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="panel panel-pad">
+              <div className="section-head">
+                <h2 className="section-title">Export nach dem Abend</h2>
+                <span className="badge badge-soft">CSV</span>
+              </div>
+              <div className="info-list" style={{ marginTop: 16 }}>
+                <div className="info-row"><span>Alle Wünsche</span><span>{requests.length}</span></div>
+                <div className="info-row"><span>Gespielte Songs</span><span>{stats.played}</span></div>
+                <div className="info-row"><span>Fehler-Log</span><span>{logs.length}</span></div>
+              </div>
+              <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('all')}>Alle Wünsche als CSV exportieren</button>
+                <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('played')}>Gespielte Songs exportieren</button>
+                <button className="btn btn-secondary btn-block" onClick={exportLogsCsv}>Fehler-Log exportieren</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="stack">
+            <div className="panel panel-pad">
+              <div className="section-head">
+                <h2 className="section-title">Spotify</h2>
+                <span className={spotifyConnected ? 'badge badge-played' : 'badge badge-rejected'}>{spotifyConnected ? 'Verbunden' : 'Nicht verbunden'}</span>
+              </div>
+
+              <div className="info-list" style={{ marginTop: 16 }}>
+                <div className="info-row"><span>Status</span><span>{spotifyConnected ? 'Verbunden' : 'Nicht verbunden'}</span></div>
+                <div className="info-row"><span>Nutzer</span><span>{spotifyUser?.display_name || spotifyUser?.id || '-'}</span></div>
+                <div className="info-row"><span>Playlist</span><span>{selectedPlaylist?.name || 'Keine gewählt'}</span></div>
+                <div className="info-row"><span>Recht Playlist hinzufügen</span><span>{debug.modifyPublic}</span></div>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <label className="label">Öffentliche Playlist auswählen</label>
+                <select className="input" value={selectedPlaylistId} onChange={(e) => onPlaylistSelect(e.target.value)}>
+                  <option value="">Keine Playlist gewählt</option>
+                  {playlists.map((playlist) => (
+                    <option key={playlist.id} value={playlist.id}>{playlist.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                <button className="btn btn-primary btn-block" onClick={spotifyLogin}>Spotify Login</button>
+                <button className="btn btn-secondary btn-block" onClick={spotifyLogout}>Spotify Logout</button>
+                <button className="btn btn-secondary btn-block" onClick={() => refreshSpotifyStatus(true)}>Verbindung testen</button>
+                <button className="btn btn-secondary btn-block" onClick={() => loadSpotifyPlaylists(true)}>Eigene öffentliche Playlists laden</button>
+                <button className="btn btn-secondary btn-block" disabled={spotifyBusy || !spotifyConnected} onClick={createPublicPlaylist}>Neue öffentliche Playlist erstellen</button>
+                <button className="btn btn-secondary btn-block" onClick={() => setActivePage('spotify')}>Spotify Detailseite öffnen</button>
+              </div>
+            </div>
+
+            <div className="panel panel-pad">
+              <div className="section-head">
+                <h2 className="section-title">DJ-Komfort</h2>
+                <span className="badge badge-soft">Live-Betrieb</span>
+              </div>
+              <div className="info-list" style={{ marginTop: 16 }}>
+                <div className="info-row"><span>DJ-Modus</span><span>{djMode ? 'Vollbild aktiv' : 'Normal'}</span></div>
+                <div className="info-row"><span>Kompaktmodus</span><span>{compactMode ? 'Aktiv' : 'Aus'}</span></div>
+                <div className="info-row"><span>Gespielte ausblenden</span><span>{hideDone ? 'Aktiv' : 'Aus'}</span></div>
+                <div className="info-row"><span>Auto-Playlist</span><span>{autoPlaylist ? 'Angenommen = Playlist' : 'Aus'}</span></div>
+                <div className="info-row"><span>Neuer Wunsch</span><span>{soundEnabled ? 'Signalton aktiv' : 'Ton aus'}</span></div>
+                <div className="info-row"><span>Gespielte unten</span><span>{playedBottomEnabled ? 'Aktiv' : 'Aus'}</span></div>
+                <div className="info-row"><span>Spotify-Anzeige</span><span>{spotifyInfoEnhanced ? 'Erweitert' : 'Einfach'}</span></div>
+              </div>
+              <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                <button className={djMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus beenden' : 'DJ-Modus starten'}</button>
+                <button className={compactMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setCompactMode((v) => !v)}>{compactMode ? 'Kompaktmodus ausschalten' : 'Kompaktmodus einschalten'}</button>
+                <button className={hideDone ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte wieder anzeigen' : 'Gespielte ausblenden'}</button>
+                <button className={autoPlaylist ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist ausschalten' : 'Auto-Playlist einschalten'}</button>
+                <button className={soundEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleSound}>{soundEnabled ? 'Signalton ausschalten' : 'Signalton einschalten'}</button>
+                <button className={playedBottomEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setPlayedBottomEnabled((v) => !v)}>{playedBottomEnabled ? 'Gespielte unten ausschalten' : 'Gespielte unten einschalten'}</button>
+                <button className={spotifyInfoEnhanced ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setSpotifyInfoEnhanced((v) => !v)}>{spotifyInfoEnhanced ? 'Spotify-Anzeige einfach' : 'Spotify-Anzeige verbessern'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {activePage === 'dashboard' ? (
         <>
           <div className="dashboard-hero panel panel-pad">
@@ -1011,13 +1135,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
             </div>
             <div className="hero-actions">
               <button className="btn btn-secondary" onClick={toggleGuestPage}>{guestPageStatus === 'EIN' ? 'Gäste-Seite AUS' : 'Gäste-Seite EIN'}</button>
-              <button className={djMode ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus AUS' : 'DJ-Modus / Vollbild'}</button>
               <button className="btn btn-secondary" onClick={() => setCompactMode((v) => !v)}>{compactMode ? 'Große Karten' : 'Kompaktmodus'}</button>
               <button className="btn btn-secondary" onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte anzeigen' : 'Gespielte ausblenden'}</button>
-              <button className={autoPlaylist ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist EIN' : 'Auto-Playlist AUS'}</button>
-              <button className={soundEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleSound}>{soundEnabled ? 'Ton bei neuem Wunsch EIN' : 'Ton bei neuem Wunsch AUS'}</button>
-              <button className={playedBottomEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setPlayedBottomEnabled((v) => !v)}>{playedBottomEnabled ? 'Gespielte unten EIN' : 'Gespielte unten AUS'}</button>
-              <button className={spotifyInfoEnhanced ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setSpotifyInfoEnhanced((v) => !v)}>{spotifyInfoEnhanced ? 'Spotify-Anzeige EIN' : 'Spotify-Anzeige AUS'}</button>
+              <button className="btn btn-primary" onClick={() => setActivePage('settings')}>Einstellungen öffnen</button>
             </div>
           </div>
 
@@ -1030,182 +1150,28 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
             <div className="panel panel-pad stat-card stat-spotify"><div className="stat-label">Spotify</div><div className="stat-value">{stats.spotify}</div><div className="stat-sub">Track gewählt</div></div>
           </div>
 
-          <div className="dashboard-grid">
-            <div className="stack">
-              <div className="panel panel-pad">
-                <div className="section-head">
-                  <h2 className="section-title">Event bearbeiten</h2>
-                  <span className="badge badge-soft">Spotify ergänzt</span>
-                </div>
-
-                <div className="field-grid">
-                  <div className="full">
-                    <label className="label">Eventname</label>
-                    <input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
-                  </div>
-                  <div>
-                    <label className="label">Event-Code</label>
-                    <input className="input" value={eventCode} onChange={(e) => setEventCode(e.target.value.toUpperCase())} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
-                  </div>
-                  <div>
-                    <label className="label">Gäste-Seite</label>
-                    <input className="input" value={guestPageStatus} readOnly />
-                  </div>
+          <div className="stack">
+            <div className="panel panel-pad dashboard-controls">
+              <div className="toolbar">
+                <input className="input search-input" placeholder="Song, Artist oder Gast suchen..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="filter-row filter-pills">
+                  {filterButtons.map(([key, label, count]) => (
+                    <button key={key} className={filter === key ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setFilter(key)}>
+                      {label} <span className="btn-count">{count}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              <div className="panel panel-pad dashboard-controls">
-                <div className="toolbar">
-                  <input className="input search-input" placeholder="Song, Artist oder Gast suchen..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                  <div className="filter-row filter-pills">
-                    {filterButtons.map(([key, label, count]) => (
-                      <button key={key} className={filter === key ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setFilter(key)}>
-                        {label} <span className="btn-count">{count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="mini-toolbar">
-                  <span>{filtered.length} sichtbar</span>
-                  <span>Gespielte unten: {playedBottomEnabled ? 'EIN' : 'AUS'}</span>
-                  <span>{compactMode ? 'Kompaktmodus aktiv' : 'Große Karten aktiv'}</span>
-                  <span>Auto-Playlist: {autoPlaylist ? 'EIN' : 'AUS'}</span>
-                  <span>Signalton: {soundEnabled ? 'EIN' : 'AUS'}</span>
-                  <span>Spotify-Anzeige: {spotifyInfoEnhanced ? 'EIN' : 'AUS'}</span>
-                </div>
-              </div>
-
-              <div className="request-list">
-                {filtered.map((item) => renderRequestCard(item))}
+              <div className="mini-toolbar">
+                <span>{filtered.length} sichtbar</span>
+                <span>Gäste-Seite: {guestPageStatus}</span>
+                <span>Spotify: {spotifyConnected ? 'verbunden' : 'nicht verbunden'}</span>
+                <span>Auto-Playlist: {autoPlaylist ? 'EIN' : 'AUS'}</span>
               </div>
             </div>
 
-            <div className="stack">
-              <div className="panel panel-pad">
-                <div className="section-head">
-                  <h2 className="section-title">Event Übersicht</h2>
-                  <span className="badge badge-soft">{guestPageStatus}</span>
-                </div>
-
-                <div className="info-list">
-                  <div className="info-row"><span>Event-Code</span><span>{eventCode}</span></div>
-                  <div className="info-row"><span>Gäste-Seite</span><span>{guestPageStatus}</span></div>
-                  <div className="info-row"><span>Anzeige</span><span>{guestPageStatus === 'EIN' ? 'Formular sichtbar' : 'Geschlossen-Seite sichtbar'}</span></div>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">Gäste-Seite</h2>
-
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  <div className="info-row"><span>Status</span><span>{guestPageStatus}</span></div>
-                  <div className="info-row"><span>QR-Code</span><span>Fest</span></div>
-                  <div className="info-row"><span>Seite</span><span>{guestPageStatus === 'EIN' ? 'Wunschformular' : 'Geschlossen'}</span></div>
-                  <div className="info-row"><span>Jetzt läuft</span><span>{showNowPlaying ? 'Sichtbar' : 'Aus'}</span></div>
-                  <div className="info-row"><span>Warteliste</span><span>{showGuestQueue ? 'Sichtbar' : 'Aus'}</span></div>
-                  <div className="info-row"><span>Aktuell gespielt</span><span>{nowPlaying ? `${nowPlaying.song_title} - ${nowPlaying.artist}` : '-'}</span></div>
-                </div>
-
-                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className="btn btn-secondary btn-block" onClick={toggleGuestPage}>
-                    {guestPageStatus === 'EIN' ? 'Gäste-Seite ausschalten' : 'Gäste-Seite einschalten'}
-                  </button>
-                  <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('nowPlaying')}>
-                    {showNowPlaying ? 'Jetzt-läuft-Anzeige ausblenden' : 'Jetzt-läuft-Anzeige anzeigen'}
-                  </button>
-                  <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('queue')}>
-                    {showGuestQueue ? 'Warteliste für Gäste ausblenden' : 'Warteliste für Gäste anzeigen'}
-                  </button>
-                </div>
-
-                <div className="guest-settings-box">
-                  <label className="label">Text, wenn Gäste-Seite AUS ist</label>
-                  <textarea className="input textarea" value={closedMessage} onChange={(e) => setClosedMessage(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
-                  <div className="preset-grid">
-                    {CLOSED_MESSAGE_PRESETS.map((message) => (
-                      <button className="btn btn-secondary" key={message} type="button" onClick={() => applyClosedMessage(message)}>{message}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">Spotify</h2>
-
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  <div className="info-row"><span>Status</span><span>{spotifyConnected ? 'Verbunden' : 'Nicht verbunden'}</span></div>
-                  <div className="info-row"><span>Playlist</span><span>{selectedPlaylist?.name || 'Keine gewählt'}</span></div>
-                  <div className="info-row"><span>Modus</span><span>Nur eigene öffentliche Playlist</span></div>
-                </div>
-
-                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className="btn btn-primary btn-block" onClick={spotifyLogin}>Spotify Login</button>
-                  <button className="btn btn-secondary btn-block" onClick={spotifyLogout}>Spotify Logout</button>
-                  <button className="btn btn-secondary btn-block" onClick={() => setActivePage('spotify')}>Spotify-Seite öffnen</button>
-                  <button className="btn btn-secondary btn-block" onClick={() => setActivePage('errors')}>Fehler-Log öffnen</button>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">Playlist Vorschau</h2>
-
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  {playlists.slice(0, 4).map((playlist, index) => (
-                    <div className="info-row" key={playlist.id}><span>{index + 1}</span><span>{playlist.name}</span></div>
-                  ))}
-                  {playlists.length === 0 ? <div className="info-row"><span>Keine Playlists geladen</span><span>-</span></div> : null}
-                </div>
-
-                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className="btn btn-secondary btn-block" onClick={() => loadSpotifyPlaylists(true)}>Eigene öffentliche Playlists laden</button>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">Export nach dem Abend</h2>
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  <div className="info-row"><span>Alle Wünsche</span><span>{requests.length}</span></div>
-                  <div className="info-row"><span>Gespielte Songs</span><span>{stats.played}</span></div>
-                  <div className="info-row"><span>Fehler-Log</span><span>{logs.length}</span></div>
-                </div>
-                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('all')}>Alle Wünsche als CSV exportieren</button>
-                  <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('played')}>Gespielte Songs exportieren</button>
-                  <button className="btn btn-secondary btn-block" onClick={exportLogsCsv}>Fehler-Log exportieren</button>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">DJ-Komfort</h2>
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  <div className="info-row"><span>DJ-Modus</span><span>{djMode ? 'Vollbild aktiv' : 'Normal'}</span></div>
-                  <div className="info-row"><span>Auto-Playlist</span><span>{autoPlaylist ? 'Angenommen = Playlist' : 'Aus'}</span></div>
-                  <div className="info-row"><span>Neuer Wunsch</span><span>{soundEnabled ? 'Signalton aktiv' : 'Ton aus'}</span></div>
-                  <div className="info-row"><span>Gespielte unten</span><span>{playedBottomEnabled ? 'Aktiv' : 'Aus'}</span></div>
-                  <div className="info-row"><span>Spotify-Anzeige</span><span>{spotifyInfoEnhanced ? 'Erweitert' : 'Einfach'}</span></div>
-                </div>
-                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className={djMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus beenden' : 'DJ-Modus starten'}</button>
-                  <button className={autoPlaylist ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist ausschalten' : 'Auto-Playlist einschalten'}</button>
-                  <button className={soundEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleSound}>{soundEnabled ? 'Signalton ausschalten' : 'Signalton einschalten'}</button>
-                  <button className={playedBottomEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setPlayedBottomEnabled((v) => !v)}>{playedBottomEnabled ? 'Gespielte unten ausschalten' : 'Gespielte unten einschalten'}</button>
-                  <button className={spotifyInfoEnhanced ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setSpotifyInfoEnhanced((v) => !v)}>{spotifyInfoEnhanced ? 'Spotify-Anzeige einfach' : 'Spotify-Anzeige verbessern'}</button>
-                </div>
-              </div>
-
-              <div className="panel panel-pad">
-                <h2 className="section-title">Letzte Spotify Meldungen</h2>
-
-                <div className="info-list" style={{ marginTop: 16 }}>
-                  {logs.filter((log) => log.area.toLowerCase().includes('spotify')).slice(0, 3).map((log) => (
-                    <div className="info-row" key={log.id} style={{ alignItems: 'flex-start' }}>
-                      <span>{log.area}<br /><small>{log.time}</small></span>
-                      <span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{log.message}</span>
-                    </div>
-                  ))}
-                  {logs.filter((log) => log.area.toLowerCase().includes('spotify')).length === 0 ? <div className="info-row"><span>Keine Meldungen</span><span>OK</span></div> : null}
-                </div>
-              </div>
+            <div className="request-list">
+              {filtered.map((item) => renderRequestCard(item))}
             </div>
           </div>
         </>

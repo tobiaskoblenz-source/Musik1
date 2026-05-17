@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'dashboard-clean-no-drag-columns-2026-05-17-v20',
+    buildVersion: 'settings-page-clean-dashboard-2026-05-17-v21',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v20: Clean Dashboard ohne Spaltenansicht und ohne Drag & Drop. Gespielte unten, Spotify-Anzeige, Auto-Playlist, Sound und Export bleiben erhalten.'
+    note: 'v21: Neue Einstellungsseite mit Event Übersicht, Spotify, Export nach dem Abend und DJ-Komfort. Dashboard wieder ruhiger.'
   });
 }
