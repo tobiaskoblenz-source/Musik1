@@ -446,9 +446,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       throw new Error(`Ungültige Track-URI für Playlist: ${trackUri || '-'}`);
     }
 
-    // Hauptweg: Spotify erwartet beim Hinzufügen eine Track-URI im Feld "uris".
-    // Wir nutzen bewusst /tracks, weil dieser Add-Items-Endpunkt bei Spotify stabil funktioniert.
-    return spotifyFetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`, {
+    // Spotify hat den alten /tracks-Endpunkt entfernt. Für neue Apps muss /items genutzt werden.
+    // Wichtig: Body muss eine echte Spotify-URI enthalten, z. B. spotify:track:...
+    return spotifyFetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items`, {
       method: 'POST',
       body: JSON.stringify({ uris: [trackUri], position: 0 })
     });
