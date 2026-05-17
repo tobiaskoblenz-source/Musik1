@@ -126,3 +126,19 @@ a{color:inherit;text-decoration:none}button,input{font:inherit}
 .closed-title-small{font-size:clamp(14px,2.8vw,18px)!important;font-weight:650!important;line-height:1.25!important;letter-spacing:-.01em!important;color:rgba(255,255,255,.72)!important;margin-bottom:12px!important}
 .closed-text-big{display:block;font-size:clamp(28px,7vw,48px)!important;font-weight:900!important;line-height:1.03!important;letter-spacing:-.045em!important;color:#fff!important;text-shadow:0 0 24px rgba(255,46,99,.45),0 0 42px rgba(124,58,237,.35)!important;margin:8px auto 18px!important;max-width:780px!important}
 @media (max-width:520px){.closed-text-big{font-size:clamp(27px,9vw,40px)!important}.closed-title-small{font-size:14px!important}}
+
+/* v17: DJ-Modus, Export, besserer Fehler-Log, Signalton */
+.dj-fullscreen{max-width:none;width:100%;padding:18px 18px 28px}.dj-fullscreen .topbar{position:sticky;top:0;z-index:20;padding:12px;border-radius:24px;background:rgba(2,6,23,.78);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.10)}.dj-fullscreen .dashboard-grid{grid-template-columns:minmax(0,2.2fr) minmax(300px,.75fr)}.dj-fullscreen .request-card{padding:22px;border-radius:28px}.dj-fullscreen .request-title{font-size:clamp(24px,2.3vw,34px)}.dj-fullscreen .request-actions .btn{min-height:54px;font-size:16px}.dj-fullscreen .request-cover{width:82px;height:82px;flex-basis:82px;border-radius:22px}.dj-fullscreen .dashboard-controls{top:92px}.log-filter-row .btn{white-space:nowrap}.log-row{align-items:flex-start}.log-error{border-color:rgba(248,113,113,.24)!important;background:rgba(239,68,68,.08)!important}.log-error b{color:#fecaca}.log-info{border-color:rgba(16,185,129,.16)!important;background:rgba(16,185,129,.045)!important}.log-info b{color:#d1fae5}
+@media (max-width:1100px){.dj-fullscreen .dashboard-grid{grid-template-columns:1fr}.dj-fullscreen .dashboard-controls{top:0}.dj-fullscreen .request-cover{width:64px;height:64px;flex-basis:64px}.dj-fullscreen .request-actions .btn{min-height:48px}}
+@media (max-width:640px){.dj-fullscreen{padding:12px}.dj-fullscreen .topbar{position:static}.log-filter-row{display:grid;grid-template-columns:1fr 1fr}.log-filter-row .btn{width:100%;justify-content:center}}
+
+/* v18: Gäste-Seite Spotify-Auswahl bewusst ohne Bilder/Cover */
+.spotify-suggestion-simple{padding:13px 14px;gap:0}
+.spotify-suggestion-simple span{width:100%}
+.spotify-suggestion-simple strong{font-size:16px}
+.spotify-suggestion-simple small{font-size:14px}
+.selected-track-box-simple{padding:14px 16px}
+.guest-request-summary-simple{gap:6px}
+.guest-request-summary-simple strong{font-size:22px}
+.guest-request-summary-simple span{font-size:17px;color:rgba(255,255,255,.76)}
+@media (max-width:520px){.spotify-suggestion-simple{padding:12px 13px}.spotify-suggestion-simple strong{font-size:15px}.guest-request-summary-simple strong{font-size:20px}}

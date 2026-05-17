@@ -316,11 +316,9 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
           <div className="panel guest-card guest-card-pretty thanks-card">
             <div className="thanks-icon">🎶</div>
             <h2 className="thanks-title">Dein Wunsch ist beim DJ angekommen.</h2>
-            <div className="guest-request-summary">
-              {sentRequest.spotify_image ? <img className="guest-summary-cover" src={sentRequest.spotify_image} alt="Spotify Cover" /> : null}
+            <div className="guest-request-summary guest-request-summary-simple">
               <strong>{sentRequest.song_title}</strong>
               <span>{sentRequest.artist}</span>
-              {sentRequest.spotify_album ? <small>Album: {sentRequest.spotify_album}</small> : null}
               <small>Gesendet von {sentRequest.guest_name || 'Gast'}</small>
             </div>
 
@@ -418,12 +416,10 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
               {spotifySuggestions.length ? (
                 <div className="spotify-suggestion-list">
                   {spotifySuggestions.map((track) => (
-                    <button className="spotify-suggestion" type="button" key={track.id} onClick={() => selectSpotifyTrack(track)}>
-                      {track.image ? <img src={track.image} alt="" /> : <span className="spotify-suggestion-empty">🎵</span>}
+                    <button className="spotify-suggestion spotify-suggestion-simple" type="button" key={track.id} onClick={() => selectSpotifyTrack(track)}>
                       <span>
                         <strong>{track.name}</strong>
                         <small>{track.artist}</small>
-                        {track.album ? <em>{track.album}</em> : null}
                       </span>
                     </button>
                   ))}
@@ -432,8 +428,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
             </div>
 
             {selectedTrack ? (
-              <div className="selected-track-box">
-                {selectedTrack.image ? <img src={selectedTrack.image} alt="" /> : null}
+              <div className="selected-track-box selected-track-box-simple">
                 <span>
                   <small>Ausgewählt von Spotify</small>
                   <strong>{selectedTrack.name}</strong>

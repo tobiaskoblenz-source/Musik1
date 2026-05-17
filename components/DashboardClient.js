@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const LOG_KEY = 'dj_wunsch_error_log';
 const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'dashboard-optimized-2026-05-17-v15';
+const BUILD_VERSION = 'guest-spotify-text-only-2026-05-17-v18';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -124,15 +124,34 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
   const [spotifyBusy, setSpotifyBusy] = useState(false);
+  const [djMode, setDjMode] = useState(false);
+  const [autoPlaylist, setAutoPlaylist] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [logFilter, setLogFilter] = useState('all');
+  const knownRequestIdsRef = useRef(new Set(initialRequests.map((r) => String(r.id))));
+  const soundEnabledRef = useRef(false);
 
   useEffect(() => {
     try {
       setLogs(JSON.parse(localStorage.getItem(LOG_KEY) || '[]'));
       const savedPlaylist = JSON.parse(localStorage.getItem(PLAYLIST_KEY) || 'null');
       if (savedPlaylist?.id) setSelectedPlaylistId(savedPlaylist.id);
+      setAutoPlaylist(localStorage.getItem('dj_auto_playlist') === 'true');
+      const savedSound = localStorage.getItem('dj_new_request_sound') === 'true';
+      setSoundEnabled(savedSound);
+      soundEnabledRef.current = savedSound;
     } catch {}
     refreshSpotifyStatus(false);
   }, []);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+    try { localStorage.setItem('dj_new_request_sound', String(soundEnabled)); } catch {}
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    try { localStorage.setItem('dj_auto_playlist', String(autoPlaylist)); } catch {}
+  }, [autoPlaylist]);
 
   useEffect(() => {
     let stopped = false;
@@ -142,7 +161,16 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         const res = await fetch('/api/requests', { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Requests konnten nicht geladen werden');
-        if (!stopped && data.requests) setRequests(data.requests);
+        if (!stopped && data.requests) {
+          const incomingIds = new Set(data.requests.map((r) => String(r.id)));
+          const newRequests = data.requests.filter((r) => !knownRequestIdsRef.current.has(String(r.id)));
+          knownRequestIdsRef.current = incomingIds;
+          if (newRequests.length && soundEnabledRef.current) {
+            playNewRequestSound();
+            flash(`${newRequests.length} neuer Musikwunsch${newRequests.length > 1 ? 'e' : ''} eingegangen`);
+          }
+          setRequests(data.requests);
+        }
       } catch (error) {
         addLog('Wünsche laden', error.message || 'Unbekannter Fehler', 'error');
       }
@@ -251,7 +279,104 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     setTimeout(() => setNotice(''), 1800);
   }
 
-  async function onStatusChange(id, status) {
+  function playNewRequestSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch {}
+  }
+
+  function toggleSound() {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    if (next) {
+      playNewRequestSound();
+      flash('Signalton für neue Wünsche ist EIN');
+      addLog('Benachrichtigung', 'Signalton für neue Wünsche aktiviert', 'info');
+    } else {
+      flash('Signalton für neue Wünsche ist AUS');
+      addLog('Benachrichtigung', 'Signalton für neue Wünsche deaktiviert', 'info');
+    }
+  }
+
+  function toggleDjMode() {
+    const next = !djMode;
+    setDjMode(next);
+    if (next) {
+      try { document.documentElement.requestFullscreen?.(); } catch {}
+      setCompactMode(false);
+      flash('DJ-Modus gestartet');
+    } else {
+      try { document.exitFullscreen?.(); } catch {}
+      flash('DJ-Modus beendet');
+    }
+  }
+
+  function csvEscape(value) {
+    return `"${String(value ?? '').replaceAll('"', '""')}"`;
+  }
+
+  function downloadTextFile(filename, text, mime = 'text/plain;charset=utf-8') {
+    try {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      addLog('Export', error.message || 'Export fehlgeschlagen', 'error');
+      flash('Export fehlgeschlagen');
+    }
+  }
+
+  function exportRequestsCsv(mode = 'all') {
+    const rows = mode === 'played' ? requests.filter((r) => r.status === 'played') : requests;
+    const header = ['ID','Status','Song','Interpret','Gast','Zeit','Spotify Track URI','Spotify URL'];
+    const lines = [header.map(csvEscape).join(';')];
+    rows.forEach((r) => {
+      lines.push([
+        r.id,
+        statusLabel(r.status),
+        r.song_title,
+        r.artist,
+        r.guest_name,
+        r.created_at,
+        r.spotify_track_uri,
+        r.spotify_url
+      ].map(csvEscape).join(';'));
+    });
+    const date = new Date().toISOString().slice(0,10);
+    downloadTextFile(`dj-wuensche-${mode}-${date}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+    addLog('Export', `${rows.length} Wünsche exportiert (${mode})`, 'info');
+    flash('Export erstellt');
+  }
+
+  function exportLogsCsv() {
+    const header = ['Zeit','Typ','Bereich','Meldung','Details'];
+    const lines = [header.map(csvEscape).join(';')];
+    logs.forEach((log) => lines.push([log.time, log.type, log.area, log.message, log.details].map(csvEscape).join(';')));
+    const date = new Date().toISOString().slice(0,10);
+    downloadTextFile(`dj-fehlerlog-${date}.csv`, lines.join('\n'), 'text/csv;charset=utf-8');
+    flash('Fehler-Log exportiert');
+  }
+
+  async function onStatusChange(id, status, options = {}) {
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     try {
       const res = await fetch('/api/requests', {
@@ -260,6 +385,13 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         body: JSON.stringify({ id, status })
       });
       if (!res.ok) throw new Error('Status konnte nicht gespeichert werden');
+      if (status === 'accepted' && autoPlaylist && !options.skipAutoPlaylist) {
+        const item = requests.find((r) => r.id === id);
+        if (item) {
+          addLog('Auto-Playlist', 'Angenommener Wunsch wird automatisch zur Playlist hinzugefügt', 'info', buildQuery(item));
+          await addToSpotifyPlaylist({ ...item, status: 'accepted' });
+        }
+      }
     } catch (error) {
       addLog('Wunsch-Status', error.message || 'Status-Fehler', 'error', `ID: ${id}, Status: ${status}`);
       flash('Status speichern fehlgeschlagen');
@@ -578,7 +710,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         'info',
         `${buildQuery(item)} | Quelle: ${track.source === 'guest-selection' ? 'Gäste-Spotify-Auswahl' : 'Dashboard-Suche'} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
       );
-      await onStatusChange(item.id, 'accepted');
+      await onStatusChange(item.id, 'accepted', { skipAutoPlaylist: true });
       addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
       flash('Zur Spotify Playlist hinzugefügt und als angenommen markiert');
     } catch (error) {
@@ -613,10 +745,31 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     };
   }
 
+  const logStats = useMemo(() => ({
+    all: logs.length,
+    error: logs.filter((log) => log.type === 'error').length,
+    info: logs.filter((log) => log.type !== 'error').length,
+    spotify: logs.filter((log) => log.area.toLowerCase().includes('spotify')).length,
+    guest: logs.filter((log) => log.area.toLowerCase().includes('gäste') || log.area.toLowerCase().includes('gast')).length,
+    requests: logs.filter((log) => log.area.toLowerCase().includes('wunsch')).length
+  }), [logs]);
+
+  const visibleLogs = useMemo(() => {
+    return logs.filter((log) => {
+      if (logFilter === 'all') return true;
+      if (logFilter === 'error') return log.type === 'error';
+      if (logFilter === 'info') return log.type !== 'error';
+      if (logFilter === 'spotify') return log.area.toLowerCase().includes('spotify');
+      if (logFilter === 'guest') return log.area.toLowerCase().includes('gäste') || log.area.toLowerCase().includes('gast');
+      if (logFilter === 'requests') return log.area.toLowerCase().includes('wunsch');
+      return true;
+    });
+  }, [logs, logFilter]);
+
   const debug = spotifyDebugText();
 
   return (
-    <main className="page-shell">
+    <main className={djMode ? 'page-shell dj-fullscreen' : 'page-shell'}>
       <div className="topbar">
         <div className="topbar-left">
           <div className="logo-box">🎧</div>
@@ -631,6 +784,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className={activePage === 'dashboard' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('dashboard')}>Dashboard</button>
           <button className={activePage === 'spotify' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className={activePage === 'errors' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('errors')}>Fehler-Log</button>
+          <button className={djMode ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus AUS' : 'DJ-Modus'}</button>
+          <button className={soundEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleSound}>{soundEnabled ? 'Ton EIN' : 'Ton AUS'}</button>
           <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
@@ -719,13 +874,30 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         <div className="panel panel-pad">
           <div className="section-head">
             <h2 className="section-title">Fehler-Log</h2>
-            <button className="btn btn-secondary" onClick={clearLogs}>Log löschen</button>
+            <div className="filter-row">
+              <button className="btn btn-secondary" onClick={exportLogsCsv}>Log exportieren</button>
+              <button className="btn btn-secondary" onClick={clearLogs}>Log löschen</button>
+            </div>
+          </div>
+          <div className="filter-row log-filter-row" style={{ marginTop: 16 }}>
+            {[
+              ['all', 'Alle', logStats.all],
+              ['error', 'Nur Fehler', logStats.error],
+              ['info', 'Nur Info', logStats.info],
+              ['spotify', 'Spotify', logStats.spotify],
+              ['guest', 'Gäste-Seite', logStats.guest],
+              ['requests', 'Wünsche', logStats.requests]
+            ].map(([key, label, count]) => (
+              <button key={key} className={logFilter === key ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setLogFilter(key)}>
+                {label} <span className="btn-count">{count}</span>
+              </button>
+            ))}
           </div>
           <div className="info-list">
-            {logs.map((log) => (
-              <div className="info-row" key={log.id} style={{ alignItems: 'flex-start' }}>
+            {visibleLogs.map((log) => (
+              <div className={log.type === 'error' ? 'info-row log-row log-error' : 'info-row log-row log-info'} key={log.id}>
                 <span style={{ minWidth: 170 }}>
-                  <b style={{ color: log.type === 'error' ? '#fecaca' : '#d1fae5' }}>{log.area}</b><br />
+                  <b>{log.area}</b><br />
                   <small>{log.time}</small><br />
                   <small>{log.type === 'error' ? 'Fehler' : 'Info'}</small>
                 </span>
@@ -735,7 +907,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 </span>
               </div>
             ))}
-            {logs.length === 0 ? <div className="info-row"><span>Keine Fehler gespeichert</span><span>OK</span></div> : null}
+            {visibleLogs.length === 0 ? <div className="info-row"><span>Keine Einträge in diesem Filter</span><span>OK</span></div> : null}
           </div>
         </div>
       ) : null}
@@ -750,8 +922,11 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
             </div>
             <div className="hero-actions">
               <button className="btn btn-secondary" onClick={toggleGuestPage}>{guestPageStatus === 'EIN' ? 'Gäste-Seite AUS' : 'Gäste-Seite EIN'}</button>
+              <button className={djMode ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus AUS' : 'DJ-Modus / Vollbild'}</button>
               <button className="btn btn-secondary" onClick={() => setCompactMode((v) => !v)}>{compactMode ? 'Große Karten' : 'Kompaktmodus'}</button>
               <button className="btn btn-secondary" onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte anzeigen' : 'Gespielte ausblenden'}</button>
+              <button className={autoPlaylist ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist EIN' : 'Auto-Playlist AUS'}</button>
+              <button className={soundEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleSound}>{soundEnabled ? 'Ton bei neuem Wunsch EIN' : 'Ton bei neuem Wunsch AUS'}</button>
             </div>
           </div>
 
@@ -803,6 +978,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                   <span>{filtered.length} sichtbar</span>
                   <span>Sortierung: Offen → Angenommen → Gespielt → Abgelehnt</span>
                   <span>{compactMode ? 'Kompaktmodus aktiv' : 'Große Karten aktiv'}</span>
+                  <span>Auto-Playlist: {autoPlaylist ? 'EIN' : 'AUS'}</span>
+                  <span>Signalton: {soundEnabled ? 'EIN' : 'AUS'}</span>
                 </div>
               </div>
 
@@ -924,6 +1101,34 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
                 <div className="stack" style={{ gap: 10, marginTop: 14 }}>
                   <button className="btn btn-secondary btn-block" onClick={() => loadSpotifyPlaylists(true)}>Eigene öffentliche Playlists laden</button>
+                </div>
+              </div>
+
+              <div className="panel panel-pad">
+                <h2 className="section-title">Export nach dem Abend</h2>
+                <div className="info-list" style={{ marginTop: 16 }}>
+                  <div className="info-row"><span>Alle Wünsche</span><span>{requests.length}</span></div>
+                  <div className="info-row"><span>Gespielte Songs</span><span>{stats.played}</span></div>
+                  <div className="info-row"><span>Fehler-Log</span><span>{logs.length}</span></div>
+                </div>
+                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                  <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('all')}>Alle Wünsche als CSV exportieren</button>
+                  <button className="btn btn-secondary btn-block" onClick={() => exportRequestsCsv('played')}>Gespielte Songs exportieren</button>
+                  <button className="btn btn-secondary btn-block" onClick={exportLogsCsv}>Fehler-Log exportieren</button>
+                </div>
+              </div>
+
+              <div className="panel panel-pad">
+                <h2 className="section-title">DJ-Komfort</h2>
+                <div className="info-list" style={{ marginTop: 16 }}>
+                  <div className="info-row"><span>DJ-Modus</span><span>{djMode ? 'Vollbild aktiv' : 'Normal'}</span></div>
+                  <div className="info-row"><span>Auto-Playlist</span><span>{autoPlaylist ? 'Angenommen = Playlist' : 'Aus'}</span></div>
+                  <div className="info-row"><span>Neuer Wunsch</span><span>{soundEnabled ? 'Signalton aktiv' : 'Ton aus'}</span></div>
+                </div>
+                <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+                  <button className={djMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus beenden' : 'DJ-Modus starten'}</button>
+                  <button className={autoPlaylist ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist ausschalten' : 'Auto-Playlist einschalten'}</button>
+                  <button className={soundEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleSound}>{soundEnabled ? 'Signalton ausschalten' : 'Signalton einschalten'}</button>
                 </div>
               </div>
 
