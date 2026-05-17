@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'guest-page-status-thanks-2026-05-17-v11',
+    buildVersion: 'guest-page-responsive-design-2026-05-17-v12',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -11,6 +11,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v10: Spotify hinzufügen setzt den Wunsch automatisch auf Angenommen und markiert Angenommen rot.'
+    note: 'v12: Gäste-Seite schöner gemacht und für Handy/Tablet optimiert. Spotify v9/v10/v11 bleibt erhalten.'
   });
 }

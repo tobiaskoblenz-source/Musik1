@@ -151,8 +151,9 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
     return (
       <main className="guest-page">
         <div className="guest-wrap">
-          <div className="guest-head">
-            <div className="guest-logo">🎧</div>
+          <div className="guest-head guest-hero">
+            <div className="guest-logo guest-logo-large">🎧</div>
+            <div className="guest-kicker">DJ Wunsch App</div>
             <h1 className="guest-title">Musikwünsche pausiert</h1>
             <p className="guest-sub">{liveEventName}</p>
             <div className="guest-badge-wrap">
@@ -160,7 +161,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
             </div>
           </div>
 
-          <div className="panel guest-card">
+          <div className="panel guest-card guest-card-pretty">
             <div className="closed-box">
               <div className="closed-icon">⏸️</div>
               <h2 className="closed-title">Der DJ nimmt gerade keine Wünsche an.</h2>
@@ -177,8 +178,9 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
     return (
       <main className="guest-page">
         <div className="guest-wrap">
-          <div className="guest-head">
-            <div className="guest-logo">✅</div>
+          <div className="guest-head guest-hero">
+            <div className="guest-logo guest-logo-large">✅</div>
+            <div className="guest-kicker">Wunsch gesendet</div>
             <h1 className="guest-title">Danke für deinen Musikwunsch</h1>
             <p className="guest-sub">{liveEventName}</p>
             <div className="guest-badge-wrap">
@@ -186,7 +188,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
             </div>
           </div>
 
-          <div className="panel guest-card thanks-card">
+          <div className="panel guest-card guest-card-pretty thanks-card">
             <div className="thanks-icon">🎶</div>
             <h2 className="thanks-title">Dein Wunsch ist beim DJ angekommen.</h2>
             <div className="guest-request-summary">
