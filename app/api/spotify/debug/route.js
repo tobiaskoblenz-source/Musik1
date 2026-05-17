@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'settings-page-spotify-nav-fix-2026-05-17-v22',
+    buildVersion: 'guest-neon-design-2026-05-17-v23',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v22: Spotify-Seite ist wieder direkt oben in der Navigation sichtbar. Einstellungen bleiben erhalten.'
+    note: 'v23: Neon-Design fuer die Gaeste-Seite. Dashboard, Spotify und Einstellungen bleiben erhalten.'
   });
 }

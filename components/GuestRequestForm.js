@@ -277,7 +277,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
       <main className="guest-page">
         <div className="guest-wrap">
           <div className="guest-head guest-hero">
-            <div className="guest-logo guest-logo-large">🎧</div>
+            <div className="guest-logo guest-logo-large">⏸️</div>
             <div className="guest-kicker">DJ Wunsch App</div>
             <h1 className="guest-title">Musikwünsche pausiert</h1>
             <p className="guest-sub">{liveEventName}</p>
@@ -447,7 +447,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
               <input className="input" value={artist} onChange={(e) => { setArtist(e.target.value); clearSelectedTrack(); }} placeholder="z. B. Daft Punk" required />
             </div>
             <p className="guest-form-hint">Alle Felder mit * sind Pflichtfelder. Nach dem Absenden siehst du hier den Status deines Wunsches.</p>
-            <button className="btn btn-primary" type="submit" disabled={sending}>{sending ? 'Wunsch wird gesendet...' : 'Wunsch absenden'}</button>
+            <button className="btn btn-primary" type="submit" disabled={sending}>{sending ? 'Wunsch wird gesendet...' : 'Musikwunsch senden'}</button>
           </form>
 
           {error ? <div className="guest-error">{error}</div> : null}
