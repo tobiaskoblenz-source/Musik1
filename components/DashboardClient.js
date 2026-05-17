@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-scope-private-permission-fix-2026-05-17-v9';
+const BUILD_VERSION = 'spotify-to-red-accepted-2026-05-17-v10';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -505,7 +505,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         'info',
         `${buildQuery(item)} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
       );
-      flash('Zur Spotify Playlist hinzugefügt');
+      await onStatusChange(item.id, 'accepted');
+      addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
+      flash('Zur Spotify Playlist hinzugefügt und als angenommen markiert');
     } catch (error) {
       const playlist = playlists.find((p) => p.id === selectedPlaylistId);
       let trackInfo = 'Track-URI: -';
