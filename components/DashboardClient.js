@@ -7,6 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
+const BUILD_VERSION = 'spotify-deploy-proof-2026-05-17-v2';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -448,6 +449,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <div className="logo-box">🎧</div>
           <div>
             <h1 className="page-title">DJ Dashboard + Spotify</h1>
+            <div className="notice">Version: {BUILD_VERSION}</div>
             <p className="page-subtitle">{eventName}</p>
           </div>
         </div>
@@ -456,7 +458,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className="btn btn-secondary" onClick={() => setActivePage('dashboard')}>Dashboard</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('errors')}>Fehler-Log</button>
-          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
+          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v2</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
       </div>
@@ -477,6 +479,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <div className="info-row"><span>Spotify Nutzer</span><span>{spotifyUser?.display_name || spotifyUser?.id || '-'}</span></div>
                 <div className="info-row"><span>Token</span><span>{debug.token}</span></div>
                 <div className="info-row"><span>Client ID</span><span>{debug.clientId}</span></div>
+                <div className="info-row"><span>Build Version</span><span>{BUILD_VERSION}</span></div>
                 <div className="info-row"><span>Redirect URI</span><span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{debug.redirectUri}</span></div>
                 <div className="info-row"><span>Scopes</span><span style={{ textAlign: 'right' }}>{debug.scopes}</span></div>
               </div>
