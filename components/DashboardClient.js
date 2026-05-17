@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'settings-page-clean-dashboard-2026-05-17-v21';
+const BUILD_VERSION = 'settings-page-spotify-nav-fix-2026-05-17-v22';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -871,6 +871,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
         <div className="topbar-actions">
           <button className={activePage === 'dashboard' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('dashboard')}>Dashboard</button>
+          <button className={activePage === 'spotify' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className={activePage === 'settings' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('settings')}>Einstellungen</button>
           <button className={activePage === 'errors' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('errors')}>Fehler-Log</button>
         </div>
