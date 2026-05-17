@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'guest-queue-nowplaying-closedtext-2026-05-17-v14';
+const BUILD_VERSION = 'dashboard-optimized-2026-05-17-v15';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -25,11 +25,12 @@ function badgeClass(status) {
   return 'badge badge-rejected';
 }
 
-function requestClass(status) {
-  if (status === 'open') return 'request-card live';
-  if (status === 'accepted') return 'request-card accepted';
-  if (status === 'played') return 'request-card played';
-  return 'request-card rejected';
+function requestClass(status, compact = false) {
+  const base = compact ? 'request-card compact' : 'request-card';
+  if (status === 'open') return `${base} live`;
+  if (status === 'accepted') return `${base} accepted`;
+  if (status === 'played') return `${base} played`;
+  return `${base} rejected`;
 }
 
 function statusLabel(status) {
@@ -107,6 +108,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [requests, setRequests] = useState(initialRequests);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [compactMode, setCompactMode] = useState(false);
+  const [hideDone, setHideDone] = useState(false);
   const [notice, setNotice] = useState('');
   const [eventName, setEventName] = useState(initialEvent?.name || 'TANZ');
   const [eventCode, setEventCode] = useState(initialEvent?.code || 'TANZ');
@@ -181,12 +184,19 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     total: requests.length,
     open: requests.filter((r) => r.status === 'open').length,
     accepted: requests.filter((r) => r.status === 'accepted').length,
-    played: requests.filter((r) => r.status === 'played').length
+    played: requests.filter((r) => r.status === 'played').length,
+    rejected: requests.filter((r) => r.status === 'rejected').length,
+    spotify: requests.filter((r) => r.spotify_track_uri || r.spotify_url).length
   }), [requests]);
 
   const filtered = useMemo(() => {
     return [...requests]
-      .filter((r) => (filter === 'all' ? true : r.status === filter))
+      .filter((r) => {
+        if (hideDone && (r.status === 'played' || r.status === 'rejected')) return false;
+        if (filter === 'all') return true;
+        if (filter === 'spotify') return Boolean(r.spotify_track_uri || r.spotify_url);
+        return r.status === filter;
+      })
       .filter((r) => {
         const q = search.trim().toLowerCase();
         if (!q) return true;
@@ -200,6 +210,14 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   }, [requests, search, filter]);
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
+  const filterButtons = [
+    ['all', 'Alle', stats.total],
+    ['open', 'Offen', stats.open],
+    ['accepted', 'Angenommen', stats.accepted],
+    ['played', 'Gespielt', stats.played],
+    ['rejected', 'Abgelehnt', stats.rejected],
+    ['spotify', 'Spotify gefunden', stats.spotify]
+  ];
   const nowPlaying = useMemo(() => requests.find((r) => r.status === 'played') || null, [requests]);
 
   function persistLogs(nextLogs) {
@@ -610,9 +628,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         </div>
 
         <div className="topbar-actions">
-          <button className="btn btn-secondary" onClick={() => setActivePage('dashboard')}>Dashboard</button>
-          <button className="btn btn-secondary" onClick={() => setActivePage('spotify')}>Spotify</button>
-          <button className="btn btn-secondary" onClick={() => setActivePage('errors')}>Fehler-Log</button>
+          <button className={activePage === 'dashboard' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('dashboard')}>Dashboard</button>
+          <button className={activePage === 'spotify' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('spotify')}>Spotify</button>
+          <button className={activePage === 'errors' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('errors')}>Fehler-Log</button>
           <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
@@ -724,11 +742,26 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
       {activePage === 'dashboard' ? (
         <>
-          <div className="stats-grid">
-            <div className="panel panel-pad"><div className="stat-label">Gesamt</div><div className="stat-value">{stats.total}</div><div className="stat-sub">alle Wünsche</div></div>
-            <div className="panel panel-pad"><div className="stat-label">Offen</div><div className="stat-value">{stats.open}</div><div className="stat-sub">neu eingegangen</div></div>
-            <div className="panel panel-pad"><div className="stat-label">Angenommen</div><div className="stat-value">{stats.accepted}</div><div className="stat-sub">für später</div></div>
-            <div className="panel panel-pad"><div className="stat-label">Gespielt</div><div className="stat-value">{stats.played}</div><div className="stat-sub">schon durch</div></div>
+          <div className="dashboard-hero panel panel-pad">
+            <div>
+              <div className="eyebrow">Live-Übersicht</div>
+              <h2 className="dashboard-hero-title">{stats.open} neue Wünsche · {stats.accepted} angenommen</h2>
+              <p>Spotify: {spotifyConnected ? 'verbunden' : 'nicht verbunden'} · Gäste-Seite: {guestPageStatus} · Playlist: {selectedPlaylist?.name || 'keine gewählt'}</p>
+            </div>
+            <div className="hero-actions">
+              <button className="btn btn-secondary" onClick={toggleGuestPage}>{guestPageStatus === 'EIN' ? 'Gäste-Seite AUS' : 'Gäste-Seite EIN'}</button>
+              <button className="btn btn-secondary" onClick={() => setCompactMode((v) => !v)}>{compactMode ? 'Große Karten' : 'Kompaktmodus'}</button>
+              <button className="btn btn-secondary" onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte anzeigen' : 'Gespielte ausblenden'}</button>
+            </div>
+          </div>
+
+          <div className="stats-grid stats-grid-wide">
+            <div className="panel panel-pad stat-card"><div className="stat-label">Gesamt</div><div className="stat-value">{stats.total}</div><div className="stat-sub">alle Wünsche</div></div>
+            <div className="panel panel-pad stat-card stat-open"><div className="stat-label">Offen</div><div className="stat-value">{stats.open}</div><div className="stat-sub">neu eingegangen</div></div>
+            <div className="panel panel-pad stat-card stat-accepted"><div className="stat-label">Angenommen</div><div className="stat-value">{stats.accepted}</div><div className="stat-sub">für später</div></div>
+            <div className="panel panel-pad stat-card stat-played"><div className="stat-label">Gespielt</div><div className="stat-value">{stats.played}</div><div className="stat-sub">schon durch</div></div>
+            <div className="panel panel-pad stat-card stat-rejected"><div className="stat-label">Abgelehnt</div><div className="stat-value">{stats.rejected}</div><div className="stat-sub">ausgeblendet</div></div>
+            <div className="panel panel-pad stat-card stat-spotify"><div className="stat-label">Spotify</div><div className="stat-value">{stats.spotify}</div><div className="stat-sub">Track gewählt</div></div>
           </div>
 
           <div className="dashboard-grid">
@@ -755,49 +788,58 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 </div>
               </div>
 
-              <div className="panel panel-pad">
+              <div className="panel panel-pad dashboard-controls">
                 <div className="toolbar">
-                  <input className="input" placeholder="Suche nach Song, Artist oder Gast" value={search} onChange={(e) => setSearch(e.target.value)} />
-                  <div className="filter-row">
-                    <button className="btn btn-secondary" onClick={() => setFilter('all')}>Alle</button>
-                    <button className="btn btn-secondary" onClick={() => setFilter('open')}>Offen</button>
-                    <button className="btn btn-secondary" onClick={() => setFilter('accepted')}>Angenommen</button>
-                    <button className="btn btn-secondary" onClick={() => setFilter('played')}>Gespielt</button>
-                    <button className="btn btn-secondary" onClick={() => setFilter('rejected')}>Abgelehnt</button>
+                  <input className="input search-input" placeholder="Song, Artist oder Gast suchen..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <div className="filter-row filter-pills">
+                    {filterButtons.map(([key, label, count]) => (
+                      <button key={key} className={filter === key ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setFilter(key)}>
+                        {label} <span className="btn-count">{count}</span>
+                      </button>
+                    ))}
                   </div>
+                </div>
+                <div className="mini-toolbar">
+                  <span>{filtered.length} sichtbar</span>
+                  <span>Sortierung: Offen → Angenommen → Gespielt → Abgelehnt</span>
+                  <span>{compactMode ? 'Kompaktmodus aktiv' : 'Große Karten aktiv'}</span>
                 </div>
               </div>
 
               <div className="request-list">
                 {filtered.map((item) => (
-                  <div key={item.id} className={requestClass(item.status)}>
+                  <div key={item.id} className={requestClass(item.status, compactMode)}>
                     <div className="request-head">
-                      <div>
-                        <div>
-                          <h3 className="request-title" style={{ display: 'inline-block', marginRight: 8 }}>{item.song_title}</h3>
-                          <span className={badgeClass(item.status)}>{statusLabel(item.status)}</span>
-                        </div>
-                        <div className="request-meta">{item.artist}</div>
-                        <div className="request-submeta">von {item.guest_name} · {item.created_at}</div>
-                        <div className="request-submeta" style={{ marginTop: 12, color: spotifyConnected ? 'rgba(110,231,183,.9)' : 'rgba(252,165,165,.9)' }}>
-                          Spotify: {spotifyConnected ? `verbunden${selectedPlaylist ? ` · Playlist: ${selectedPlaylist.name}` : ''}` : 'nicht verbunden'}
+                      <div className="request-main">
+                        {item.spotify_image ? <img className="request-cover" src={item.spotify_image} alt="" /> : <div className="request-cover empty">♪</div>}
+                        <div className="request-text">
+                          <div className="request-title-row">
+                            <h3 className="request-title">{item.song_title}</h3>
+                            <span className={badgeClass(item.status)}>{statusLabel(item.status)}</span>
+                            {(item.spotify_track_uri || item.spotify_url) ? <span className="badge badge-spotify">Spotify Track</span> : <span className="badge badge-soft">Manuell</span>}
+                          </div>
+                          <div className="request-meta">{item.artist}</div>
+                          <div className="request-submeta">von {item.guest_name} · {item.created_at}</div>
+                          <div className="request-submeta" style={{ marginTop: 10, color: spotifyConnected ? 'rgba(110,231,183,.9)' : 'rgba(252,165,165,.9)' }}>
+                            Spotify: {spotifyConnected ? `verbunden${selectedPlaylist ? ` · Playlist: ${selectedPlaylist.name}` : ''}` : 'nicht verbunden'}
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div className="request-tools">
                         <div className="request-id">#{item.id}</div>
-                        <button className="btn btn-secondary" onClick={() => onDelete(item.id)} style={{ width: 38, minWidth: 38, height: 38, padding: 0, borderRadius: 14 }} aria-label="Wunsch entfernen" title="Wunsch entfernen">×</button>
+                        <button className="btn btn-icon btn-danger" onClick={() => onDelete(item.id)} aria-label="Wunsch entfernen" title="Wunsch entfernen">×</button>
                       </div>
                     </div>
 
                     <div className="request-actions">
-                      <button className="btn btn-secondary" onClick={() => onStatusChange(item.id, 'accepted')}>Annehmen</button>
-                      <button className="btn btn-secondary" onClick={() => onStatusChange(item.id, 'played')}>Gespielt</button>
-                      <button className="btn btn-secondary" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>Zu Spotify</button>
+                      <button className="btn btn-accept" onClick={() => onStatusChange(item.id, 'accepted')}>Angenommen</button>
+                      <button className="btn btn-played" onClick={() => onStatusChange(item.id, 'played')}>Gespielt</button>
+                      <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>Zu Spotify</button>
                       <button className="btn btn-secondary" disabled={spotifyBusy} onClick={() => openInSpotify(item)}>Spotify öffnen</button>
-                      <button className="btn btn-secondary" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>+ Zur Spotify Playlist</button>
+                      <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>+ Playlist</button>
                       <button className="btn btn-ghost" onClick={() => onStatusChange(item.id, 'open')}>Zurück auf offen</button>
-                      <button className="btn btn-ghost" onClick={() => onStatusChange(item.id, 'rejected')}>Ablehnen</button>
+                      <button className="btn btn-reject" onClick={() => onStatusChange(item.id, 'rejected')}>Ablehnen</button>
                     </div>
                   </div>
                 ))}
