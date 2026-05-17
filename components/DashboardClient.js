@@ -259,8 +259,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       // Server-Login erzwingt die richtige Railway Redirect URI und kann nicht mehr auf localhost fallen.
       localStorage.removeItem(VERIFIER_KEY);
       localStorage.removeItem(REDIRECT_KEY);
-      addLog('Spotify Login', 'Weiterleitung über /api/spotify/login gestartet', 'info');
-      window.location.href = '/api/spotify/login';
+      addLog('Spotify Login', 'Weiterleitung über /spotify/login gestartet', 'info');
+      window.location.href = '/spotify/login';
     } catch (error) {
       addLog('Spotify Login', error.message || 'Login fehlgeschlagen', 'error');
       flash('Spotify Login fehlgeschlagen');
@@ -442,7 +442,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className="btn btn-secondary" onClick={() => setActivePage('dashboard')}>Dashboard</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('errors')}>Fehler-Log</button>
-          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v3</button>
+          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v4</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
       </div>

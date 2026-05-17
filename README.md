@@ -35,3 +35,6 @@ https://DEINE-APP.up.railway.app/api/spotify/callback
 ```
 
 Nur öffentliche Playlists werden benutzt. Private Playlists sind bewusst nicht eingebaut.
+
+
+V4 Fix: Spotify Login kann zusätzlich über /spotify/login getestet werden. Diese Seite baut die Spotify-URL direkt im Browser mit fester Railway-Redirect-URI, falls /api/spotify/login bei Railway 404 liefert.
