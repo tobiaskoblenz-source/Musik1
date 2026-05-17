@@ -1,18 +1,37 @@
-# DJ App Spotify Clean
+# DJ Wunsch App - Spotify + Fehler-Log
 
-Start:
-npm install
-npm run dev
+Diese Version baut auf der funktionierenden Basis auf:
 
-Seiten:
-- http://localhost:3000/dashboard
-- http://localhost:3000/e/TANZ
+- DashboardClient.js repariert
+- GuestRequestForm.js repariert
+- Wunsch-Buttons bleiben erhalten
+- Gäste-Seite EIN/AUS bleibt erhalten
 
-Drin:
-- Gäste-Seite EIN/AUS bleibt
-- gleiche Gäste-URL bleibt
-- fester QR bleibt nur als Info
-- Spotify-Bereich sauber eingebaut
-- Playlist Vorschau
-- Treffer prüfen
-- Spotify aktuell als Platzhalter vorbereitet
+Neu:
+
+- Fehler-Log als eigene Ansicht im Dashboard
+- Spotify-Seite als eigene Ansicht im Dashboard
+- Spotify Login und Logout als separate Buttons
+- Öffentliche Spotify Playlists laden
+- Wunsch zu öffentlicher Spotify Playlist hinzufügen
+- Spotify Track öffnen
+
+## Railway Variables
+
+Bei Railway unter Variables eintragen:
+
+```txt
+NEXT_PUBLIC_SPOTIFY_CLIENT_ID=deine_echte_spotify_client_id
+NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=https://DEINE-APP.up.railway.app/spotify/callback
+NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public
+```
+
+## Spotify Developer Dashboard
+
+In deiner Spotify App unter Redirect URIs exakt eintragen:
+
+```txt
+https://DEINE-APP.up.railway.app/spotify/callback
+```
+
+Nur öffentliche Playlists werden benutzt. Private Playlists sind bewusst nicht eingebaut.
