@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-to-red-accepted-2026-05-17-v10';
+const BUILD_VERSION = 'guest-spotify-search-2026-05-17-v13';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -431,6 +431,18 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   }
 
   async function findSpotifyTrack(item) {
+    if (item?.spotify_track_uri?.startsWith('spotify:track:')) {
+      return {
+        id: item.spotify_track_id || item.spotify_track_uri.replace('spotify:track:', ''),
+        uri: item.spotify_track_uri,
+        name: item.song_title || 'Spotify Track',
+        artists: [{ name: item.artist || '' }],
+        external_urls: { spotify: item.spotify_url || `https://open.spotify.com/track/${item.spotify_track_uri.replace('spotify:track:', '')}` },
+        album: { name: item.spotify_album || '', images: item.spotify_image ? [{ url: item.spotify_image }] : [] },
+        source: 'guest-selection'
+      };
+    }
+
     const query = buildQuery(item);
     if (!query) throw new Error('Song oder Artist fehlt');
     const params = new URLSearchParams({ q: query, type: 'track', limit: '3' });
@@ -503,7 +515,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         'Spotify Playlist',
         `Hinzugefügt: ${track.name} → ${playlistName}`,
         'info',
-        `${buildQuery(item)} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
+        `${buildQuery(item)} | Quelle: ${track.source === 'guest-selection' ? 'Gäste-Spotify-Auswahl' : 'Dashboard-Suche'} | Track-URI: ${track.uri} | Track-ID: ${track.id || '-'} | Playlist-ID: ${selectedPlaylistId} | Snapshot: ${result?.snapshot_id || '-'}`
       );
       await onStatusChange(item.id, 'accepted');
       addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
