@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'guest-queue-bottom-dashboard-quickmenu-2026-05-17-v24';
+const BUILD_VERSION = 'dashboard-spotify-playlist-box-2026-05-17-v25';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -123,6 +123,10 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
   const [spotifyBusy, setSpotifyBusy] = useState(false);
+  const [playlistItems, setPlaylistItems] = useState([]);
+  const [playlistTotal, setPlaylistTotal] = useState(null);
+  const [playlistViewOpen, setPlaylistViewOpen] = useState(false);
+  const [playlistItemsLoading, setPlaylistItemsLoading] = useState(false);
   const [djMode, setDjMode] = useState(false);
   const [autoPlaylist, setAutoPlaylist] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -253,6 +257,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   }, [requests, search, filter, playedBottomEnabled]);
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
+  const lastPlaylistLog = logs.find((log) => log.area.toLowerCase().includes('spotify playlist') && log.type !== 'error' && log.message.toLowerCase().includes('hinzugefügt'));
   const filterButtons = [
     ['all', 'Alle', stats.total],
     ['open', 'Offen', stats.open],
@@ -262,6 +267,13 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     ['spotify', 'Spotify gefunden', stats.spotify]
   ];
   const nowPlaying = useMemo(() => requests.find((r) => r.status === 'played') || null, [requests]);
+
+
+  useEffect(() => {
+    if (activePage === 'dashboard' && selectedPlaylistId && spotifyConnected) {
+      loadSpotifyPlaylistItems(false);
+    }
+  }, [selectedPlaylistId, spotifyConnected, activePage]);
 
   function persistLogs(nextLogs) {
     setLogs(nextLogs);
@@ -589,6 +601,49 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     }
   }
 
+
+  async function loadSpotifyPlaylistItems(showFlash = true) {
+    if (!selectedPlaylistId) {
+      setPlaylistItems([]);
+      setPlaylistTotal(null);
+      if (showFlash) flash('Keine Spotify Playlist gewählt');
+      return;
+    }
+    try {
+      setPlaylistItemsLoading(true);
+      const data = await spotifyFetch(
+        `https://api.spotify.com/v1/playlists/${encodeURIComponent(selectedPlaylistId)}/tracks?limit=20&fields=total,items(track(id,name,uri,artists(name),external_urls(spotify),is_local))`
+      );
+      const items = (data.items || [])
+        .map((entry) => entry?.track)
+        .filter((track) => track && !track.is_local)
+        .map((track) => ({
+          id: track.id,
+          name: track.name || 'Unbekannter Song',
+          artist: (track.artists || []).map((a) => a.name).filter(Boolean).join(', ') || 'Unbekannter Interpret',
+          uri: track.uri,
+          url: track.external_urls?.spotify || ''
+        }));
+      setPlaylistItems(items);
+      setPlaylistTotal(typeof data.total === 'number' ? data.total : items.length);
+      if (showFlash) flash('Spotify Playlist geladen');
+      addLog('Spotify Playlist', `Playlist-Inhalt geladen: ${selectedPlaylist?.name || selectedPlaylistId}`, 'info', `${items.length} angezeigt · Gesamt: ${typeof data.total === 'number' ? data.total : items.length}`);
+    } catch (error) {
+      addLog('Spotify Playlist', error.message || 'Playlist konnte nicht geladen werden', 'error', `Playlist-ID: ${selectedPlaylistId}`);
+      if (showFlash) flash('Playlist laden fehlgeschlagen');
+    } finally {
+      setPlaylistItemsLoading(false);
+    }
+  }
+
+  function openSelectedPlaylist() {
+    if (!selectedPlaylistId) {
+      flash('Keine Spotify Playlist gewählt');
+      return;
+    }
+    window.open(`https://open.spotify.com/playlist/${selectedPlaylistId}`, '_blank', 'noopener,noreferrer');
+  }
+
   async function createPublicPlaylist() {
     try {
       setSpotifyBusy(true);
@@ -631,6 +686,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     if (playlist) {
       localStorage.setItem(PLAYLIST_KEY, JSON.stringify({ id: playlist.id, name: playlist.name }));
       addLog('Spotify Playlist', `Playlist gewählt: ${playlist.name}`, 'info');
+      setPlaylistItems([]);
+      setPlaylistTotal(null);
+      setTimeout(() => loadSpotifyPlaylistItems(false), 0);
     }
   }
 
@@ -728,6 +786,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       await onStatusChange(item.id, 'accepted', { skipAutoPlaylist: true });
       addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
       flash('Zur Spotify Playlist hinzugefügt und als angenommen markiert');
+      await loadSpotifyPlaylistItems(false);
     } catch (error) {
       const playlist = playlists.find((p) => p.id === selectedPlaylistId);
       let trackInfo = 'Track-URI: -';
@@ -1155,6 +1214,46 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <span>Alle Einstellungen</span><b>Öffnen</b>
               </button>
             </div>
+          </div>
+
+          <div className="panel panel-pad spotify-dashboard-box">
+            <div className="section-head">
+              <div>
+                <div className="eyebrow">Spotify Playlist</div>
+                <h2 className="section-title">{selectedPlaylist?.name || 'Keine Playlist gewählt'}</h2>
+              </div>
+              <span className={spotifyConnected ? 'badge badge-spotify' : 'badge badge-rejected'}>{spotifyConnected ? 'Verbunden' : 'Nicht verbunden'}</span>
+            </div>
+            <div className="playlist-dashboard-grid">
+              <div className="playlist-summary-card">
+                <span>Aktive Playlist</span>
+                <strong>{selectedPlaylist?.name || 'Bitte in Spotify auswählen'}</strong>
+                <small>{playlistTotal !== null ? `${playlistTotal} Songs in Spotify` : selectedPlaylistId ? 'Noch nicht geladen' : 'Keine Playlist aktiv'}</small>
+              </div>
+              <div className="playlist-summary-card">
+                <span>Zuletzt hinzugefügt</span>
+                <strong>{lastPlaylistLog?.message?.replace('Hinzugefügt: ', '') || '-'}</strong>
+                <small>{lastPlaylistLog?.time || 'Noch kein Eintrag'}</small>
+              </div>
+              <div className="playlist-actions-card">
+                <button className="btn btn-secondary" disabled={!spotifyConnected || !selectedPlaylistId || playlistItemsLoading} onClick={() => loadSpotifyPlaylistItems(true)}>{playlistItemsLoading ? 'Lädt...' : 'Neu laden'}</button>
+                <button className="btn btn-secondary" disabled={!selectedPlaylistId} onClick={openSelectedPlaylist}>Spotify öffnen</button>
+                <button className="btn btn-primary" disabled={!selectedPlaylistId} onClick={() => setPlaylistViewOpen((v) => !v)}>{playlistViewOpen ? 'Liste ausblenden' : 'Playlist anzeigen'}</button>
+              </div>
+            </div>
+            {playlistViewOpen ? (
+              <div className="playlist-track-list">
+                {playlistItems.length ? playlistItems.slice(0, 12).map((track, index) => (
+                  <div className="playlist-track-row" key={`${track.uri || track.id}-${index}`}>
+                    <span>{index + 1}</span>
+                    <strong>{track.name}</strong>
+                    <small>{track.artist}</small>
+                  </div>
+                )) : (
+                  <div className="empty-column">Noch keine Playlist-Daten geladen. Klicke auf „Neu laden“.</div>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div className="stats-grid stats-grid-wide">

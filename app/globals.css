@@ -251,3 +251,17 @@ a{color:inherit;text-decoration:none}button,input{font:inherit}
 .queue-box-bottom{margin-top:14px;margin-bottom:0!important}
 @media (max-width:1180px){.dashboard-quick-menu{width:100%;flex:1 1 auto}.dashboard-quick-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}.quick-menu-head{grid-column:1/-1}.quick-menu-btn{min-height:48px}}
 @media (max-width:640px){.dashboard-quick-menu{grid-template-columns:1fr}.quick-menu-btn{justify-content:space-between}.guest-card-pretty + .queue-box-bottom{margin-top:16px!important}}
+
+/* v25 Spotify Playlist Box im Dashboard */
+.spotify-dashboard-box{margin-bottom:18px;background:radial-gradient(circle at top left,rgba(30,215,96,.14),transparent 34%),linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.035));border-color:rgba(30,215,96,.18)}
+.playlist-dashboard-grid{display:grid;grid-template-columns:1.05fr 1.15fr auto;gap:12px;align-items:stretch;margin-top:14px}
+.playlist-summary-card,.playlist-actions-card{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);border-radius:18px;padding:13px 14px;min-width:0}
+.playlist-summary-card span{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.50);font-weight:900;margin-bottom:6px}
+.playlist-summary-card strong{display:block;color:#fff;font-size:16px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.playlist-summary-card small{display:block;color:rgba(255,255,255,.58);font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.playlist-actions-card{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.playlist-actions-card .btn{min-height:40px;padding:10px 12px;border-radius:14px;font-size:13px}
+.playlist-track-list{margin-top:12px;border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;background:rgba(0,0,0,.16)}
+.playlist-track-row{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,.8fr);gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.playlist-track-row:last-child{border-bottom:0}.playlist-track-row span{width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.20);color:#bbf7d0;font-weight:900;font-size:12px}.playlist-track-row strong,.playlist-track-row small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playlist-track-row strong{font-size:14px;color:#fff}.playlist-track-row small{font-size:13px;color:rgba(255,255,255,.62)}
+@media (max-width:980px){.playlist-dashboard-grid{grid-template-columns:1fr}.playlist-actions-card{justify-content:stretch}.playlist-actions-card .btn{flex:1 1 150px}.playlist-track-row{grid-template-columns:34px minmax(0,1fr);gap:8px}.playlist-track-row small{grid-column:2;color:rgba(255,255,255,.58)}}
