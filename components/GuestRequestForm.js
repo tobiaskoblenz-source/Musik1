@@ -289,8 +289,8 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
           <div className="panel guest-card guest-card-pretty">
             <div className="closed-box">
               <div className="closed-icon">⏸️</div>
-              <h2 className="closed-title">Der DJ nimmt gerade keine Wünsche an.</h2>
-              <p className="closed-text">{closedMessage}</p>
+              <h2 className="closed-title closed-title-small">Der DJ nimmt gerade keine Wünsche an.</h2>
+              <p className="closed-text closed-text-big">{closedMessage}</p>
               <p className="closed-hint">Sobald der DJ die Seite wieder freigibt, kannst du hier deinen Songwunsch senden.</p>
             </div>
           </div>
