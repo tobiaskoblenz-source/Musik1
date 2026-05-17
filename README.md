@@ -22,7 +22,7 @@ Bei Railway unter Variables eintragen:
 
 ```txt
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=deine_echte_spotify_client_id
-NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=https://DEINE-APP.up.railway.app/spotify/callback
+NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=https://DEINE-APP.up.railway.app/api/spotify/callback
 NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public
 ```
 
@@ -31,7 +31,7 @@ NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modi
 In deiner Spotify App unter Redirect URIs exakt eintragen:
 
 ```txt
-https://DEINE-APP.up.railway.app/spotify/callback
+https://DEINE-APP.up.railway.app/api/spotify/callback
 ```
 
 Nur öffentliche Playlists werden benutzt. Private Playlists sind bewusst nicht eingebaut.
