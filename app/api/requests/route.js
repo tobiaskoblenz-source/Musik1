@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addRequest, deleteRequest, getRequests, updateRequestStatus } from '../../../lib/store';
+import { addRequest, deleteRequest, getRequests, updateRequestOrder, updateRequestStatus } from '../../../lib/store';
 
 export async function GET() {
   return NextResponse.json({ requests: getRequests() });
@@ -26,6 +26,10 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   const body = await request.json();
+  if (Array.isArray(body.orderIds)) {
+    updateRequestOrder(body.orderIds);
+    return NextResponse.json({ ok: true, requests: getRequests() });
+  }
   updateRequestStatus(body.id, body.status);
   return NextResponse.json({ ok: true, requests: getRequests() });
 }
