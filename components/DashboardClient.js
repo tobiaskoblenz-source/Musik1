@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-client-callback-fix-2026-05-17-v5';
+const BUILD_VERSION = 'spotify-playlist-owner-scope-fix-2026-05-17-v6';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -56,6 +56,14 @@ function getStoredToken() {
 
 function isTokenValid(token) {
   return Boolean(token?.access_token && token?.expires_at && Date.now() < token.expires_at - 30000);
+}
+
+function getTokenScopes(token = getStoredToken()) {
+  return String(token?.scope || '').split(/\s+/).filter(Boolean);
+}
+
+function hasSpotifyScope(scope) {
+  return getTokenScopes().includes(scope);
 }
 
 async function sha256(text) {
@@ -322,7 +330,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       const me = await spotifyFetch('https://api.spotify.com/v1/me');
       setSpotifyUser(me);
       setSpotifyConnected(true);
-      await loadSpotifyPlaylists(false);
+      await loadSpotifyPlaylists(false, me);
       if (showFlash) flash('Spotify Verbindung OK');
     } catch (error) {
       setSpotifyConnected(false);
@@ -332,25 +340,73 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     }
   }
 
-  async function loadSpotifyPlaylists(showFlash = true) {
+  async function loadSpotifyPlaylists(showFlash = true, userOverride = null) {
     try {
+      const token = getStoredToken();
+      const scopes = getTokenScopes(token);
+      const user = userOverride || spotifyUser || await spotifyFetch('https://api.spotify.com/v1/me');
+      if (!spotifyUser && user) setSpotifyUser(user);
+
       const data = await spotifyFetch('https://api.spotify.com/v1/me/playlists?limit=50');
-      const publicLists = (data.items || []).filter((playlist) => playlist.public === true);
-      setPlaylists(publicLists);
+      const writablePublicLists = (data.items || []).filter((playlist) => {
+        const isPublic = playlist.public === true;
+        const isOwner = playlist.owner?.id && playlist.owner.id === user?.id;
+        const isCollaborative = playlist.collaborative === true;
+        return isPublic && (isOwner || isCollaborative);
+      });
+      setPlaylists(writablePublicLists);
 
       const saved = JSON.parse(localStorage.getItem(PLAYLIST_KEY) || 'null');
-      const nextSelected = publicLists.find((p) => p.id === saved?.id)?.id || publicLists[0]?.id || '';
+      const nextSelected = writablePublicLists.find((p) => p.id === saved?.id)?.id || writablePublicLists[0]?.id || '';
       setSelectedPlaylistId(nextSelected);
       if (nextSelected) {
-        const playlist = publicLists.find((p) => p.id === nextSelected);
+        const playlist = writablePublicLists.find((p) => p.id === nextSelected);
         localStorage.setItem(PLAYLIST_KEY, JSON.stringify({ id: playlist.id, name: playlist.name }));
+      } else {
+        localStorage.removeItem(PLAYLIST_KEY);
       }
 
-      if (showFlash) flash(`${publicLists.length} öffentliche Playlists geladen`);
-      addLog('Spotify Playlists', `${publicLists.length} öffentliche Playlists geladen`, 'info');
+      const details = `User: ${user?.id || '-'} | Token-Scopes: ${scopes.join(' ') || '-'} | Nur eigene öffentliche Playlists werden angezeigt.`;
+      if (showFlash) flash(`${writablePublicLists.length} eigene öffentliche Playlists geladen`);
+      addLog('Spotify Playlists', `${writablePublicLists.length} eigene öffentliche Playlists geladen`, 'info', details);
     } catch (error) {
       addLog('Spotify Playlists', error.message || 'Playlists konnten nicht geladen werden', 'error');
       if (showFlash) flash('Playlists laden fehlgeschlagen');
+    }
+  }
+
+  async function createPublicPlaylist() {
+    try {
+      setSpotifyBusy(true);
+      const token = getStoredToken();
+      if (!isTokenValid(token)) throw new Error('Kein gültiger Spotify Login vorhanden');
+      if (!getTokenScopes(token).includes('playlist-modify-public')) {
+        throw new Error(`Spotify Recht fehlt: playlist-modify-public. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
+      }
+      const user = spotifyUser || await spotifyFetch('https://api.spotify.com/v1/me');
+      if (!user?.id) throw new Error('Spotify Nutzer-ID konnte nicht geladen werden');
+
+      const name = `DJ Musikwünsche ${new Date().toLocaleDateString('de-DE')}`;
+      const playlist = await spotifyFetch(`https://api.spotify.com/v1/users/${encodeURIComponent(user.id)}/playlists`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          public: true,
+          description: 'Automatisch erstellt von der DJ Wunsch App'
+        })
+      });
+
+      setPlaylists((prev) => [playlist, ...prev.filter((p) => p.id !== playlist.id)]);
+      setSelectedPlaylistId(playlist.id);
+      localStorage.setItem(PLAYLIST_KEY, JSON.stringify({ id: playlist.id, name: playlist.name }));
+      addLog('Spotify Playlist', `Öffentliche Playlist erstellt: ${playlist.name}`, 'info', `Owner: ${playlist.owner?.id || user.id}`);
+      flash('Öffentliche Playlist erstellt');
+    } catch (error) {
+      addLog('Spotify Playlist erstellen', error.message || 'Playlist konnte nicht erstellt werden', 'error');
+      flash('Playlist erstellen fehlgeschlagen');
+      setActivePage('errors');
+    } finally {
+      setSpotifyBusy(false);
     }
   }
 
@@ -395,17 +451,32 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   async function addToSpotifyPlaylist(item) {
     try {
       setSpotifyBusy(true);
-      if (!selectedPlaylistId) throw new Error('Bitte erst eine öffentliche Playlist auswählen');
+      const token = getStoredToken();
+      if (!isTokenValid(token)) throw new Error('Kein gültiger Spotify Login vorhanden');
+      if (!getTokenScopes(token).includes('playlist-modify-public')) {
+        throw new Error(`Spotify Recht fehlt: playlist-modify-public. Bitte Spotify Logout und Login neu machen. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
+      }
+      if (!selectedPlaylistId) throw new Error('Bitte erst eine eigene öffentliche Playlist auswählen oder eine neue erstellen');
+
+      const playlist = playlists.find((p) => p.id === selectedPlaylistId);
+      const user = spotifyUser || await spotifyFetch('https://api.spotify.com/v1/me');
+      if (playlist && playlist.public !== true) throw new Error('Die gewählte Playlist ist nicht öffentlich');
+      if (playlist && playlist.owner?.id !== user?.id && playlist.collaborative !== true) {
+        throw new Error(`Diese Playlist gehört nicht deinem eingeloggten Spotify-Konto. Owner: ${playlist.owner?.id || '-'} | Du: ${user?.id || '-'}`);
+      }
+
       const track = await findSpotifyTrack(item);
       await spotifyFetch(`https://api.spotify.com/v1/playlists/${selectedPlaylistId}/tracks`, {
         method: 'POST',
         body: JSON.stringify({ uris: [track.uri] })
       });
-      const playlistName = playlists.find((p) => p.id === selectedPlaylistId)?.name || 'ausgewählte Playlist';
-      addLog('Spotify Playlist', `Hinzugefügt: ${track.name} → ${playlistName}`, 'info', buildQuery(item));
+      const playlistName = playlist?.name || 'ausgewählte Playlist';
+      addLog('Spotify Playlist', `Hinzugefügt: ${track.name} → ${playlistName}`, 'info', `${buildQuery(item)} | Playlist-ID: ${selectedPlaylistId}`);
       flash('Zur Spotify Playlist hinzugefügt');
     } catch (error) {
-      addLog('Spotify Playlist', error.message || 'Hinzufügen fehlgeschlagen', 'error', buildQuery(item));
+      const playlist = playlists.find((p) => p.id === selectedPlaylistId);
+      const details = `${buildQuery(item)} | Playlist: ${playlist?.name || '-'} | Owner: ${playlist?.owner?.id || '-'} | Public: ${playlist?.public} | Collaborative: ${playlist?.collaborative} | Token-Scopes: ${getTokenScopes().join(' ') || '-'}`;
+      addLog('Spotify Playlist', error.message || 'Hinzufügen fehlgeschlagen', 'error', details);
       flash('Playlist hinzufügen fehlgeschlagen');
       setActivePage('errors');
     } finally {
@@ -420,6 +491,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       clientId: config.clientId ? 'Vorhanden' : 'FEHLT',
       redirectUri: config.redirectUri || 'FEHLT',
       scopes: config.scopes,
+      tokenScopes: getTokenScopes(token).join(' ') || '-',
+      modifyPublic: getTokenScopes(token).includes('playlist-modify-public') ? 'OK' : 'FEHLT',
       token: isTokenValid(token) ? 'Gültig' : token?.access_token ? 'Abgelaufen' : 'Nicht vorhanden'
     };
   }
@@ -442,7 +515,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className="btn btn-secondary" onClick={() => setActivePage('dashboard')}>Dashboard</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('spotify')}>Spotify</button>
           <button className="btn btn-secondary" onClick={() => setActivePage('errors')}>Fehler-Log</button>
-          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login v4</button>
+          <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
           <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
         </div>
       </div>
@@ -465,21 +538,23 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <div className="info-row"><span>Client ID</span><span>{debug.clientId}</span></div>
                 <div className="info-row"><span>Build Version</span><span>{BUILD_VERSION}</span></div>
                 <div className="info-row"><span>Redirect URI</span><span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{debug.redirectUri}</span></div>
-                <div className="info-row"><span>Scopes</span><span style={{ textAlign: 'right' }}>{debug.scopes}</span></div>
+                <div className="info-row"><span>Login-Scopes angefragt</span><span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{debug.scopes}</span></div>
+                <div className="info-row"><span>Token-Scopes erhalten</span><span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{debug.tokenScopes}</span></div>
+                <div className="info-row"><span>Recht Playlist hinzufügen</span><span>{debug.modifyPublic}</span></div>
               </div>
 
               <div className="filter-row" style={{ marginTop: 16 }}>
                 <button className="btn btn-primary" onClick={spotifyLogin}>Spotify Login</button>
                 <button className="btn btn-secondary" onClick={spotifyLogout}>Spotify Logout</button>
                 <button className="btn btn-secondary" onClick={() => refreshSpotifyStatus(true)}>Verbindung testen</button>
-                <button className="btn btn-secondary" onClick={() => loadSpotifyPlaylists(true)}>Playlists neu laden</button>
+                <button className="btn btn-secondary" onClick={() => loadSpotifyPlaylists(true)}>Eigene Playlists neu laden</button>
               </div>
             </div>
 
             <div className="panel panel-pad">
               <div className="section-head">
                 <h2 className="section-title">Öffentliche Playlist</h2>
-                <span className="badge badge-soft">nur public</span>
+                <span className="badge badge-soft">nur eigene public</span>
               </div>
 
               <div style={{ marginTop: 16 }}>
@@ -487,15 +562,22 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <select className="input" value={selectedPlaylistId} onChange={(e) => onPlaylistSelect(e.target.value)}>
                   <option value="">Keine Playlist gewählt</option>
                   {playlists.map((playlist) => (
-                    <option key={playlist.id} value={playlist.id}>{playlist.name}</option>
+                    <option key={playlist.id} value={playlist.id}>{playlist.name} · Owner: {playlist.owner?.display_name || playlist.owner?.id || '-'}</option>
                   ))}
                 </select>
               </div>
 
               <div className="info-list">
                 <div className="info-row"><span>Ausgewählt</span><span>{selectedPlaylist?.name || '-'}</span></div>
-                <div className="info-row"><span>Geladene öffentliche Playlists</span><span>{playlists.length}</span></div>
+                <div className="info-row"><span>Geladene eigene öffentliche Playlists</span><span>{playlists.length}</span></div>
+                <div className="info-row"><span>Playlist Owner</span><span>{selectedPlaylist?.owner?.display_name || selectedPlaylist?.owner?.id || '-'}</span></div>
+                <div className="info-row"><span>Playlist ID</span><span style={{ overflowWrap: 'anywhere', textAlign: 'right' }}>{selectedPlaylistId || '-'}</span></div>
+                <div className="info-row"><span>Public</span><span>{selectedPlaylist ? String(selectedPlaylist.public) : '-'}</span></div>
                 <div className="info-row"><span>Hinzufügen</span><span>{selectedPlaylistId ? 'Bereit' : 'Playlist fehlt'}</span></div>
+              </div>
+
+              <div className="filter-row" style={{ marginTop: 16 }}>
+                <button className="btn btn-primary" disabled={spotifyBusy || !spotifyConnected} onClick={createPublicPlaylist}>Neue öffentliche Playlist erstellen</button>
               </div>
             </div>
           </div>
@@ -660,7 +742,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <div className="info-list" style={{ marginTop: 16 }}>
                   <div className="info-row"><span>Status</span><span>{spotifyConnected ? 'Verbunden' : 'Nicht verbunden'}</span></div>
                   <div className="info-row"><span>Playlist</span><span>{selectedPlaylist?.name || 'Keine gewählt'}</span></div>
-                  <div className="info-row"><span>Modus</span><span>Nur öffentliche Playlist</span></div>
+                  <div className="info-row"><span>Modus</span><span>Nur eigene öffentliche Playlist</span></div>
                 </div>
 
                 <div className="stack" style={{ gap: 10, marginTop: 14 }}>
@@ -682,7 +764,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 </div>
 
                 <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-                  <button className="btn btn-secondary btn-block" onClick={() => loadSpotifyPlaylists(true)}>Öffentliche Playlists laden</button>
+                  <button className="btn btn-secondary btn-block" onClick={() => loadSpotifyPlaylists(true)}>Eigene öffentliche Playlists laden</button>
                 </div>
               </div>
 
