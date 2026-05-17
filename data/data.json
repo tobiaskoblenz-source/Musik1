@@ -3,7 +3,10 @@
     "id": "1",
     "name": "TANZ",
     "code": "TANZ",
-    "isActive": true
+    "isActive": true,
+    "closedMessage": "Wünsche sind kurz pausiert. Der DJ ist gleich wieder bereit.",
+    "showGuestQueue": true,
+    "showNowPlaying": true
   },
   "requests": [
     {

@@ -7,7 +7,16 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'guest-spotify-search-2026-05-17-v13';
+const BUILD_VERSION = 'guest-queue-nowplaying-closedtext-2026-05-17-v14';
+
+const CLOSED_MESSAGE_PRESETS = [
+  'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
+  'Wünsche sind kurz pausiert. Der DJ ist gleich wieder bereit.',
+  'Der DJ sortiert gerade die Musikwünsche. Gleich geht es weiter.',
+  'Musikwünsche sind aktuell geschlossen. Danke für eure Wünsche!'
+];
+
+const STATUS_SORT_ORDER = { open: 0, accepted: 1, played: 2, rejected: 3 };
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -102,6 +111,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [eventName, setEventName] = useState(initialEvent?.name || 'TANZ');
   const [eventCode, setEventCode] = useState(initialEvent?.code || 'TANZ');
   const [guestPageStatus, setGuestPageStatus] = useState(initialEvent?.isActive ? 'EIN' : 'AUS');
+  const [closedMessage, setClosedMessage] = useState(initialEvent?.closedMessage || CLOSED_MESSAGE_PRESETS[1]);
+  const [showGuestQueue, setShowGuestQueue] = useState(initialEvent?.showGuestQueue !== false);
+  const [showNowPlaying, setShowNowPlaying] = useState(initialEvent?.showNowPlaying !== false);
   const [activePage, setActivePage] = useState('dashboard');
   const [logs, setLogs] = useState([]);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
@@ -142,6 +154,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           setEventName(data.event.name);
           setEventCode(data.event.code);
           setGuestPageStatus(data.event.isActive ? 'EIN' : 'AUS');
+          setClosedMessage(data.event.closedMessage || CLOSED_MESSAGE_PRESETS[1]);
+          setShowGuestQueue(data.event.showGuestQueue !== false);
+          setShowNowPlaying(data.event.showNowPlaying !== false);
         }
       } catch (error) {
         addLog('Gäste-Seite laden', error.message || 'Unbekannter Fehler', 'error');
@@ -170,16 +185,22 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   }), [requests]);
 
   const filtered = useMemo(() => {
-    return requests
+    return [...requests]
       .filter((r) => (filter === 'all' ? true : r.status === filter))
       .filter((r) => {
         const q = search.trim().toLowerCase();
         if (!q) return true;
         return [r.song_title, r.artist, r.guest_name].some((v) => String(v || '').toLowerCase().includes(q));
+      })
+      .sort((a, b) => {
+        const statusDiff = (STATUS_SORT_ORDER[a.status] ?? 9) - (STATUS_SORT_ORDER[b.status] ?? 9);
+        if (statusDiff !== 0) return statusDiff;
+        return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
       });
   }, [requests, search, filter]);
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
+  const nowPlaying = useMemo(() => requests.find((r) => r.status === 'played') || null, [requests]);
 
   function persistLogs(nextLogs) {
     setLogs(nextLogs);
@@ -243,7 +264,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     }
   }
 
-  async function saveEvent(nextStatus = guestPageStatus, nextName = eventName, nextCode = eventCode) {
+  async function saveEvent(nextStatus = guestPageStatus, nextName = eventName, nextCode = eventCode, nextClosedMessage = closedMessage, nextShowGuestQueue = showGuestQueue, nextShowNowPlaying = showNowPlaying) {
     try {
       const res = await fetch('/api/event', {
         method: 'PATCH',
@@ -251,7 +272,10 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         body: JSON.stringify({
           name: nextName,
           code: nextCode,
-          isActive: nextStatus === 'EIN'
+          isActive: nextStatus === 'EIN',
+          closedMessage: nextClosedMessage,
+          showGuestQueue: nextShowGuestQueue,
+          showNowPlaying: nextShowNowPlaying
         })
       });
       if (!res.ok) throw new Error('Event konnte nicht gespeichert werden');
@@ -265,7 +289,26 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   function toggleGuestPage() {
     const nextStatus = guestPageStatus === 'EIN' ? 'AUS' : 'EIN';
     setGuestPageStatus(nextStatus);
-    saveEvent(nextStatus, eventName, eventCode);
+    saveEvent(nextStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying);
+  }
+
+  function applyClosedMessage(message) {
+    setClosedMessage(message);
+    saveEvent(guestPageStatus, eventName, eventCode, message, showGuestQueue, showNowPlaying);
+  }
+
+  function toggleGuestOption(optionName) {
+    if (optionName === 'queue') {
+      const next = !showGuestQueue;
+      setShowGuestQueue(next);
+      saveEvent(guestPageStatus, eventName, eventCode, closedMessage, next, showNowPlaying);
+      return;
+    }
+    if (optionName === 'nowPlaying') {
+      const next = !showNowPlaying;
+      setShowNowPlaying(next);
+      saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, next);
+    }
   }
 
   async function spotifyLogin() {
@@ -699,11 +742,11 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                 <div className="field-grid">
                   <div className="full">
                     <label className="label">Eventname</label>
-                    <input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)} />
+                    <input className="input" value={eventName} onChange={(e) => setEventName(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
                   </div>
                   <div>
                     <label className="label">Event-Code</label>
-                    <input className="input" value={eventCode} onChange={(e) => setEventCode(e.target.value.toUpperCase())} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode)} />
+                    <input className="input" value={eventCode} onChange={(e) => setEventCode(e.target.value.toUpperCase())} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
                   </div>
                   <div>
                     <label className="label">Gäste-Seite</label>
@@ -782,12 +825,31 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                   <div className="info-row"><span>Status</span><span>{guestPageStatus}</span></div>
                   <div className="info-row"><span>QR-Code</span><span>Fest</span></div>
                   <div className="info-row"><span>Seite</span><span>{guestPageStatus === 'EIN' ? 'Wunschformular' : 'Geschlossen'}</span></div>
+                  <div className="info-row"><span>Jetzt läuft</span><span>{showNowPlaying ? 'Sichtbar' : 'Aus'}</span></div>
+                  <div className="info-row"><span>Warteliste</span><span>{showGuestQueue ? 'Sichtbar' : 'Aus'}</span></div>
+                  <div className="info-row"><span>Aktuell gespielt</span><span>{nowPlaying ? `${nowPlaying.song_title} - ${nowPlaying.artist}` : '-'}</span></div>
                 </div>
 
                 <div className="stack" style={{ gap: 10, marginTop: 14 }}>
                   <button className="btn btn-secondary btn-block" onClick={toggleGuestPage}>
                     {guestPageStatus === 'EIN' ? 'Gäste-Seite ausschalten' : 'Gäste-Seite einschalten'}
                   </button>
+                  <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('nowPlaying')}>
+                    {showNowPlaying ? 'Jetzt-läuft-Anzeige ausblenden' : 'Jetzt-läuft-Anzeige anzeigen'}
+                  </button>
+                  <button className="btn btn-secondary btn-block" onClick={() => toggleGuestOption('queue')}>
+                    {showGuestQueue ? 'Warteliste für Gäste ausblenden' : 'Warteliste für Gäste anzeigen'}
+                  </button>
+                </div>
+
+                <div className="guest-settings-box">
+                  <label className="label">Text, wenn Gäste-Seite AUS ist</label>
+                  <textarea className="input textarea" value={closedMessage} onChange={(e) => setClosedMessage(e.target.value)} onBlur={() => saveEvent(guestPageStatus, eventName, eventCode, closedMessage, showGuestQueue, showNowPlaying)} />
+                  <div className="preset-grid">
+                    {CLOSED_MESSAGE_PRESETS.map((message) => (
+                      <button className="btn btn-secondary" key={message} type="button" onClick={() => applyClosedMessage(message)}>{message}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

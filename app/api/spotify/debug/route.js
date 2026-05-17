@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'guest-spotify-search-2026-05-17-v13',
+    buildVersion: 'guest-queue-nowplaying-closedtext-2026-05-17-v14',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v13: Gäste-Seite mit Spotify-Suche, Auswahl, Cover und gespeicherter Track-URI. Spotify Login/Playlist bleibt erhalten.'
+    note: 'v14: Gäste-Seite mit Sperrtext-Auswahl, Warteliste, Jetzt-läuft-Anzeige und automatisch sortiertem Dashboard. Spotify Login/Playlist bleibt erhalten.'
   });
 }

@@ -27,6 +27,15 @@ function guestStatusClass(status) {
   return 'guest-status open';
 }
 
+function queueStatusLabel(status) {
+  if (status === 'accepted') return 'Angenommen';
+  if (status === 'played') return 'Gespielt';
+  if (status === 'rejected') return 'Abgelehnt';
+  return 'Wartet';
+}
+
+const STATUS_SORT_ORDER = { open: 0, accepted: 1, played: 2, rejected: 3 };
+
 export default function GuestRequestForm({ eventCode, eventName, isActive: initialIsActive }) {
   const [name, setName] = useState('');
   const [song, setSong] = useState('');
@@ -36,6 +45,10 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
   const [isActive, setIsActive] = useState(initialIsActive);
   const [liveEventName, setLiveEventName] = useState(eventName);
   const [liveEventCode, setLiveEventCode] = useState(eventCode);
+  const [closedMessage, setClosedMessage] = useState('Wünsche sind kurz pausiert. Der DJ ist gleich wieder bereit.');
+  const [showGuestQueue, setShowGuestQueue] = useState(true);
+  const [showNowPlaying, setShowNowPlaying] = useState(true);
+  const [guestRequests, setGuestRequests] = useState([]);
   const [sending, setSending] = useState(false);
   const [spotifyQuery, setSpotifyQuery] = useState('');
   const [spotifySuggestions, setSpotifySuggestions] = useState([]);
@@ -47,6 +60,17 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
   const cleanSong = useMemo(() => song.trim(), [song]);
   const cleanArtist = useMemo(() => artist.trim(), [artist]);
   const cleanSpotifyQuery = useMemo(() => spotifyQuery.trim(), [spotifyQuery]);
+  const nowPlaying = useMemo(() => guestRequests.find((item) => item.status === 'played') || null, [guestRequests]);
+  const guestQueue = useMemo(() => {
+    return [...guestRequests]
+      .filter((item) => item.status === 'open' || item.status === 'accepted')
+      .sort((a, b) => {
+        const statusDiff = (STATUS_SORT_ORDER[a.status] ?? 9) - (STATUS_SORT_ORDER[b.status] ?? 9);
+        if (statusDiff !== 0) return statusDiff;
+        return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
+      })
+      .slice(0, 8);
+  }, [guestRequests]);
 
   useEffect(() => {
     let stopped = false;
@@ -59,6 +83,9 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
           setIsActive(Boolean(data.event.isActive));
           setLiveEventName(data.event.name || eventName);
           setLiveEventCode(data.event.code || eventCode);
+          setClosedMessage(data.event.closedMessage || 'Wünsche sind kurz pausiert. Der DJ ist gleich wieder bereit.');
+          setShowGuestQueue(data.event.showGuestQueue !== false);
+          setShowNowPlaying(data.event.showNowPlaying !== false);
         }
       } catch {}
     }
@@ -71,6 +98,28 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
       clearInterval(interval);
     };
   }, [eventCode, eventName]);
+
+  useEffect(() => {
+    let stopped = false;
+
+    async function loadGuestRequests() {
+      try {
+        const res = await fetch('/api/requests', { cache: 'no-store' });
+        const data = await res.json();
+        if (!stopped && Array.isArray(data.requests)) {
+          setGuestRequests(data.requests);
+        }
+      } catch {}
+    }
+
+    loadGuestRequests();
+    const interval = setInterval(loadGuestRequests, 3000);
+
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!sentRequest?.id) return;
@@ -241,7 +290,7 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
             <div className="closed-box">
               <div className="closed-icon">⏸️</div>
               <h2 className="closed-title">Der DJ nimmt gerade keine Wünsche an.</h2>
-              <p className="closed-text">Die Gäste-Seite ist aktuell ausgeschaltet.</p>
+              <p className="closed-text">{closedMessage}</p>
               <p className="closed-hint">Sobald der DJ die Seite wieder freigibt, kannst du hier deinen Songwunsch senden.</p>
             </div>
           </div>
@@ -308,6 +357,40 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
           <div><strong>2</strong><span>Titel wählen</span></div>
           <div><strong>3</strong><span>Status sehen</span></div>
         </div>
+
+        {showNowPlaying && nowPlaying ? (
+          <div className="guest-live-box now-playing-box">
+            <div className="guest-live-icon">▶️</div>
+            <div>
+              <span>Jetzt läuft / zuletzt gespielt</span>
+              <strong>{nowPlaying.song_title}</strong>
+              <small>{nowPlaying.artist}</small>
+            </div>
+          </div>
+        ) : null}
+
+        {showGuestQueue ? (
+          <div className="guest-live-box queue-box">
+            <div className="queue-head">
+              <strong>Warteliste</strong>
+              <span>{guestQueue.length ? `${guestQueue.length} Wünsche` : 'Noch leer'}</span>
+            </div>
+            {guestQueue.length ? (
+              <div className="queue-list">
+                {guestQueue.map((item, index) => (
+                  <div className="queue-item" key={item.id}>
+                    <b>{index + 1}</b>
+                    <span>
+                      <strong>{item.song_title}</strong>
+                      <small>{item.artist}</small>
+                    </span>
+                    <em>{queueStatusLabel(item.status)}</em>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="queue-empty">Sei der erste Gast mit einem Musikwunsch.</p>}
+          </div>
+        ) : null}
 
         <div className="panel guest-card guest-card-pretty">
           <form className="guest-form" onSubmit={onSubmit} noValidate>
