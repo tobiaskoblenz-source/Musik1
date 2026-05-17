@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'dashboard-layout-dragdrop-spotify-2026-05-17-v19';
+const BUILD_VERSION = 'dashboard-clean-no-drag-columns-2026-05-17-v20';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -17,13 +17,6 @@ const CLOSED_MESSAGE_PRESETS = [
 ];
 
 const STATUS_SORT_ORDER = { open: 0, accepted: 1, rejected: 2, played: 3 };
-const STATUS_COLUMNS = [
-  ['open', 'Neue Wünsche'],
-  ['accepted', 'Angenommen'],
-  ['played', 'Gespielt'],
-  ['rejected', 'Abgelehnt']
-];
-
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
   if (status === 'accepted') return 'badge badge-accepted';
@@ -134,11 +127,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [autoPlaylist, setAutoPlaylist] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [logFilter, setLogFilter] = useState('all');
-  const [dragDropEnabled, setDragDropEnabled] = useState(false);
   const [playedBottomEnabled, setPlayedBottomEnabled] = useState(true);
-  const [columnMode, setColumnMode] = useState(false);
   const [spotifyInfoEnhanced, setSpotifyInfoEnhanced] = useState(true);
-  const [draggedRequestId, setDraggedRequestId] = useState('');
   const knownRequestIdsRef = useRef(new Set(initialRequests.map((r) => String(r.id))));
   const soundEnabledRef = useRef(false);
 
@@ -151,9 +141,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       const savedSound = localStorage.getItem('dj_new_request_sound') === 'true';
       setSoundEnabled(savedSound);
       soundEnabledRef.current = savedSound;
-      setDragDropEnabled(localStorage.getItem('dj_drag_drop_enabled') === 'true');
       setPlayedBottomEnabled(localStorage.getItem('dj_played_bottom_enabled') !== 'false');
-      setColumnMode(localStorage.getItem('dj_column_mode') === 'true');
       setSpotifyInfoEnhanced(localStorage.getItem('dj_spotify_info_enhanced') !== 'false');
     } catch {}
     refreshSpotifyStatus(false);
@@ -168,17 +156,11 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     try { localStorage.setItem('dj_auto_playlist', String(autoPlaylist)); } catch {}
   }, [autoPlaylist]);
 
-  useEffect(() => {
-    try { localStorage.setItem('dj_drag_drop_enabled', String(dragDropEnabled)); } catch {}
-  }, [dragDropEnabled]);
 
   useEffect(() => {
     try { localStorage.setItem('dj_played_bottom_enabled', String(playedBottomEnabled)); } catch {}
   }, [playedBottomEnabled]);
 
-  useEffect(() => {
-    try { localStorage.setItem('dj_column_mode', String(columnMode)); } catch {}
-  }, [columnMode]);
 
   useEffect(() => {
     try { localStorage.setItem('dj_spotify_info_enhanced', String(spotifyInfoEnhanced)); } catch {}
@@ -262,22 +244,13 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         return [r.song_title, r.artist, r.guest_name].some((v) => String(v || '').toLowerCase().includes(q));
       })
       .sort((a, b) => {
-        if (dragDropEnabled) {
-          const manualDiff = Number(a.order_index ?? 999999) - Number(b.order_index ?? 999999);
-          if (playedBottomEnabled) {
-            const groupA = a.status === 'played' ? 9 : a.status === 'rejected' ? 8 : 0;
-            const groupB = b.status === 'played' ? 9 : b.status === 'rejected' ? 8 : 0;
-            if (groupA !== groupB) return groupA - groupB;
-          }
-          if (manualDiff !== 0) return manualDiff;
-        }
         if (playedBottomEnabled) {
           const statusDiff = (STATUS_SORT_ORDER[a.status] ?? 9) - (STATUS_SORT_ORDER[b.status] ?? 9);
           if (statusDiff !== 0) return statusDiff;
         }
         return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
       });
-  }, [requests, search, filter, dragDropEnabled, playedBottomEnabled]);
+  }, [requests, search, filter, playedBottomEnabled]);
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
   const filterButtons = [
@@ -782,44 +755,6 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     return { label: 'Ohne Spotify', className: 'badge badge-warn' };
   }
 
-  function getColumnItems(status) {
-    return filtered.filter((item) => item.status === status);
-  }
-
-  async function saveRequestOrder(nextRequests) {
-    try {
-      const orderIds = nextRequests.map((item) => item.id);
-      const res = await fetch('/api/requests', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds })
-      });
-      if (!res.ok) throw new Error('Reihenfolge konnte nicht gespeichert werden');
-      addLog('Wunsch-Reihenfolge', 'Drag & Drop Reihenfolge gespeichert', 'info');
-    } catch (error) {
-      addLog('Wunsch-Reihenfolge', error.message || 'Reihenfolge speichern fehlgeschlagen', 'error');
-      flash('Reihenfolge speichern fehlgeschlagen');
-    }
-  }
-
-  function moveRequestInList(sourceId, targetId) {
-    if (!dragDropEnabled || !sourceId || !targetId || sourceId === targetId) return;
-    const visibleIds = filtered.map((item) => String(item.id));
-    const from = visibleIds.indexOf(String(sourceId));
-    const to = visibleIds.indexOf(String(targetId));
-    if (from < 0 || to < 0) return;
-    const nextVisibleIds = [...visibleIds];
-    const [moved] = nextVisibleIds.splice(from, 1);
-    nextVisibleIds.splice(to, 0, moved);
-    const orderMap = new Map(nextVisibleIds.map((id, index) => [id, index]));
-    const nextRequests = requests.map((item) => ({
-      ...item,
-      order_index: orderMap.has(String(item.id)) ? orderMap.get(String(item.id)) : Number(item.order_index ?? 999999)
-    }));
-    setRequests(nextRequests);
-    saveRequestOrder(nextRequests);
-    flash('Reihenfolge gespeichert');
-  }
 
   function renderSpotifyBadges(item) {
     if (!spotifyInfoEnhanced) {
@@ -839,18 +774,10 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     return (
       <div
         key={item.id}
-        className={`${requestClass(item.status, compactMode)} ${dragDropEnabled ? 'drag-enabled' : ''}`}
-        draggable={dragDropEnabled}
-        onDragStart={() => setDraggedRequestId(String(item.id))}
-        onDragOver={(e) => dragDropEnabled && e.preventDefault()}
-        onDrop={() => {
-          moveRequestInList(draggedRequestId, String(item.id));
-          setDraggedRequestId('');
-        }}
+        className={requestClass(item.status, compactMode)}
       >
         <div className="request-head">
           <div className="request-main">
-            {dragDropEnabled ? <div className="drag-handle" title="Ziehen zum Sortieren">☰</div> : null}
             {item.spotify_image ? <img className="request-cover" src={item.spotify_image} alt="" /> : <div className="request-cover empty">♪</div>}
             <div className="request-text">
               <div className="request-title-row">
@@ -1089,9 +1016,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
               <button className="btn btn-secondary" onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte anzeigen' : 'Gespielte ausblenden'}</button>
               <button className={autoPlaylist ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist EIN' : 'Auto-Playlist AUS'}</button>
               <button className={soundEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={toggleSound}>{soundEnabled ? 'Ton bei neuem Wunsch EIN' : 'Ton bei neuem Wunsch AUS'}</button>
-              <button className={dragDropEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setDragDropEnabled((v) => !v)}>{dragDropEnabled ? 'Drag & Drop EIN' : 'Drag & Drop AUS'}</button>
               <button className={playedBottomEnabled ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setPlayedBottomEnabled((v) => !v)}>{playedBottomEnabled ? 'Gespielte unten EIN' : 'Gespielte unten AUS'}</button>
-              <button className={columnMode ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setColumnMode((v) => !v)}>{columnMode ? 'Spalten EIN' : 'Spalten AUS'}</button>
               <button className={spotifyInfoEnhanced ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setSpotifyInfoEnhanced((v) => !v)}>{spotifyInfoEnhanced ? 'Spotify-Anzeige EIN' : 'Spotify-Anzeige AUS'}</button>
             </div>
           </div>
@@ -1146,35 +1071,13 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                   <span>{compactMode ? 'Kompaktmodus aktiv' : 'Große Karten aktiv'}</span>
                   <span>Auto-Playlist: {autoPlaylist ? 'EIN' : 'AUS'}</span>
                   <span>Signalton: {soundEnabled ? 'EIN' : 'AUS'}</span>
-                  <span>Drag & Drop: {dragDropEnabled ? 'EIN' : 'AUS'}</span>
-                  <span>Spalten: {columnMode ? 'EIN' : 'AUS'}</span>
                   <span>Spotify-Anzeige: {spotifyInfoEnhanced ? 'EIN' : 'AUS'}</span>
                 </div>
               </div>
 
-              {columnMode ? (
-                <div className="kanban-board">
-                  {STATUS_COLUMNS.map(([status, title]) => {
-                    const columnItems = getColumnItems(status);
-                    return (
-                      <div className="kanban-column" key={status}>
-                        <div className="kanban-head">
-                          <strong>{title}</strong>
-                          <span>{columnItems.length}</span>
-                        </div>
-                        <div className="request-list kanban-list">
-                          {columnItems.map((item) => renderRequestCard(item))}
-                          {columnItems.length === 0 ? <div className="empty-column">Keine Wünsche</div> : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="request-list">
-                  {filtered.map((item) => renderRequestCard(item))}
-                </div>
-              )}
+              <div className="request-list">
+                {filtered.map((item) => renderRequestCard(item))}
+              </div>
             </div>
 
             <div className="stack">
@@ -1278,18 +1181,14 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                   <div className="info-row"><span>DJ-Modus</span><span>{djMode ? 'Vollbild aktiv' : 'Normal'}</span></div>
                   <div className="info-row"><span>Auto-Playlist</span><span>{autoPlaylist ? 'Angenommen = Playlist' : 'Aus'}</span></div>
                   <div className="info-row"><span>Neuer Wunsch</span><span>{soundEnabled ? 'Signalton aktiv' : 'Ton aus'}</span></div>
-                  <div className="info-row"><span>Drag & Drop</span><span>{dragDropEnabled ? 'Aktiv' : 'Aus'}</span></div>
                   <div className="info-row"><span>Gespielte unten</span><span>{playedBottomEnabled ? 'Aktiv' : 'Aus'}</span></div>
-                  <div className="info-row"><span>Spalten-Dashboard</span><span>{columnMode ? 'Aktiv' : 'Aus'}</span></div>
                   <div className="info-row"><span>Spotify-Anzeige</span><span>{spotifyInfoEnhanced ? 'Erweitert' : 'Einfach'}</span></div>
                 </div>
                 <div className="stack" style={{ gap: 10, marginTop: 14 }}>
                   <button className={djMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleDjMode}>{djMode ? 'DJ-Modus beenden' : 'DJ-Modus starten'}</button>
                   <button className={autoPlaylist ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setAutoPlaylist((v) => !v)}>{autoPlaylist ? 'Auto-Playlist ausschalten' : 'Auto-Playlist einschalten'}</button>
                   <button className={soundEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={toggleSound}>{soundEnabled ? 'Signalton ausschalten' : 'Signalton einschalten'}</button>
-                  <button className={dragDropEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setDragDropEnabled((v) => !v)}>{dragDropEnabled ? 'Drag & Drop ausschalten' : 'Drag & Drop einschalten'}</button>
                   <button className={playedBottomEnabled ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setPlayedBottomEnabled((v) => !v)}>{playedBottomEnabled ? 'Gespielte unten ausschalten' : 'Gespielte unten einschalten'}</button>
-                  <button className={columnMode ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setColumnMode((v) => !v)}>{columnMode ? 'Spalten ausschalten' : 'Spalten einschalten'}</button>
                   <button className={spotifyInfoEnhanced ? 'btn btn-primary btn-block' : 'btn btn-secondary btn-block'} onClick={() => setSpotifyInfoEnhanced((v) => !v)}>{spotifyInfoEnhanced ? 'Spotify-Anzeige einfach' : 'Spotify-Anzeige verbessern'}</button>
                 </div>
               </div>
