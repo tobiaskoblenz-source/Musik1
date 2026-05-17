@@ -367,28 +367,6 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
           </div>
         ) : null}
 
-        {showGuestQueue ? (
-          <div className="guest-live-box queue-box">
-            <div className="queue-head">
-              <strong>Warteliste</strong>
-              <span>{guestQueue.length ? `${guestQueue.length} Wünsche` : 'Noch leer'}</span>
-            </div>
-            {guestQueue.length ? (
-              <div className="queue-list">
-                {guestQueue.map((item, index) => (
-                  <div className="queue-item" key={item.id}>
-                    <b>{index + 1}</b>
-                    <span>
-                      <strong>{item.song_title}</strong>
-                      <small>{item.artist}</small>
-                    </span>
-                    <em>{queueStatusLabel(item.status)}</em>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="queue-empty">Sei der erste Gast mit einem Musikwunsch.</p>}
-          </div>
-        ) : null}
 
         <div className="panel guest-card guest-card-pretty">
           <form className="guest-form" onSubmit={onSubmit} noValidate>
@@ -452,6 +430,30 @@ export default function GuestRequestForm({ eventCode, eventName, isActive: initi
 
           {error ? <div className="guest-error">{error}</div> : null}
         </div>
+
+        {showGuestQueue ? (
+          <div className="guest-live-box queue-box queue-box-bottom">
+            <div className="queue-head">
+              <strong>Warteliste</strong>
+              <span>{guestQueue.length ? `${guestQueue.length} Wünsche` : 'Noch leer'}</span>
+            </div>
+            {guestQueue.length ? (
+              <div className="queue-list">
+                {guestQueue.map((item, index) => (
+                  <div className="queue-item" key={item.id}>
+                    <b>{index + 1}</b>
+                    <span>
+                      <strong>{item.song_title}</strong>
+                      <small>{item.artist}</small>
+                    </span>
+                    <em>{queueStatusLabel(item.status)}</em>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="queue-empty">Sei der erste Gast mit einem Musikwunsch.</p>}
+          </div>
+        ) : null}
+
       </div>
     </main>
   );

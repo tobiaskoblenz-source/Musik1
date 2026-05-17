@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'settings-page-spotify-nav-fix-2026-05-17-v22';
+const BUILD_VERSION = 'guest-queue-bottom-dashboard-quickmenu-2026-05-17-v24';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -1134,11 +1134,26 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
               <h2 className="dashboard-hero-title">{stats.open} neue Wünsche · {stats.accepted} angenommen</h2>
               <p>Spotify: {spotifyConnected ? 'verbunden' : 'nicht verbunden'} · Gäste-Seite: {guestPageStatus} · Playlist: {selectedPlaylist?.name || 'keine gewählt'}</p>
             </div>
-            <div className="hero-actions">
-              <button className="btn btn-secondary" onClick={toggleGuestPage}>{guestPageStatus === 'EIN' ? 'Gäste-Seite AUS' : 'Gäste-Seite EIN'}</button>
-              <button className="btn btn-secondary" onClick={() => setCompactMode((v) => !v)}>{compactMode ? 'Große Karten' : 'Kompaktmodus'}</button>
-              <button className="btn btn-secondary" onClick={() => setHideDone((v) => !v)}>{hideDone ? 'Gespielte anzeigen' : 'Gespielte ausblenden'}</button>
-              <button className="btn btn-primary" onClick={() => setActivePage('settings')}>Einstellungen öffnen</button>
+            <div className="dashboard-quick-menu">
+              <div className="quick-menu-head">
+                <span>Wichtiges Menü</span>
+                <small>rechts</small>
+              </div>
+              <button className={guestPageStatus === 'EIN' ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleGuestPage}>
+                <span>Gäste-Seite</span><b>{guestPageStatus}</b>
+              </button>
+              <button className={autoPlaylist ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={() => setAutoPlaylist((v) => !v)}>
+                <span>Auto-Playlist</span><b>{autoPlaylist ? 'EIN' : 'AUS'}</b>
+              </button>
+              <button className={soundEnabled ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleSound}>
+                <span>Signalton</span><b>{soundEnabled ? 'EIN' : 'AUS'}</b>
+              </button>
+              <button className={compactMode ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={() => setCompactMode((v) => !v)}>
+                <span>Kompakt</span><b>{compactMode ? 'EIN' : 'AUS'}</b>
+              </button>
+              <button className="quick-menu-btn" onClick={() => setActivePage('settings')}>
+                <span>Alle Einstellungen</span><b>Öffnen</b>
+              </button>
             </div>
           </div>
 
