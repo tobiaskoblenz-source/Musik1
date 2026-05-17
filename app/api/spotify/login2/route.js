@@ -11,7 +11,7 @@ function base64url(buffer) {
 
 export async function GET() {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || process.env.SPOTIFY_CLIENT_ID || '';
-  const scopes = process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || process.env.SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public';
+  const scopes = process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || process.env.SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public playlist-modify-private';
 
   if (!clientId) {
     return NextResponse.json({ error: 'NEXT_PUBLIC_SPOTIFY_CLIENT_ID fehlt bei Railway' }, { status: 500 });

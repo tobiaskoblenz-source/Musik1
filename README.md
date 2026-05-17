@@ -23,7 +23,7 @@ Bei Railway unter Variables eintragen:
 ```txt
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=deine_echte_spotify_client_id
 NEXT_PUBLIC_SPOTIFY_REDIRECT_URI=https://DEINE-APP.up.railway.app/api/spotify/callback
-NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public
+NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public playlist-modify-private
 ```
 
 ## Spotify Developer Dashboard

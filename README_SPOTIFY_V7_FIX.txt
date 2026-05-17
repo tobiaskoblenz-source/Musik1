@@ -3,7 +3,7 @@ Spotify v7 Fix
 Basis: v6 bleibt erhalten.
 
 Geändert:
-- Build-Version: spotify-playlist-add-items-diagnostic-2026-05-17-v7
+- Build-Version: spotify-scope-private-permission-fix-2026-05-17-v9
 - Playlist-Hinzufügen nutzt garantiert eine spotify:track:... URI aus der Spotify-Suche.
 - Vor dem Hinzufügen werden Playlist-Details frisch von Spotify geladen.
 - Fehler-Log zeigt jetzt Track-URI, Track-ID, Playlist-ID, Owner, Public, Collaborative und Token-Scopes.

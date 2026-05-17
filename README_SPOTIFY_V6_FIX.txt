@@ -12,4 +12,4 @@ Geändert:
 
 Wichtig:
 - Bei Spotify Developer bleibt Redirect URI: https://musik1-production.up.railway.app/api/spotify/callback
-- Railway Scopes: user-read-private playlist-read-private playlist-modify-public
+- Railway Scopes: user-read-private playlist-read-private playlist-modify-public playlist-modify-private

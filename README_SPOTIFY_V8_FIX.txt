@@ -1,6 +1,6 @@
 # Spotify Playlist Items Endpoint Fix v8
 
-Build-Version: spotify-playlist-items-endpoint-fix-2026-05-17-v8
+Build-Version: spotify-scope-private-permission-fix-2026-05-17-v9
 
 Änderung:
 - Spotify Login bleibt auf der funktionierenden v5/v6/v7-Basis.
@@ -15,4 +15,4 @@ Nach Deploy prüfen:
 https://musik1-production.up.railway.app/api/spotify/debug
 
 Dort muss stehen:
-buildVersion = spotify-playlist-items-endpoint-fix-2026-05-17-v8
+buildVersion = spotify-scope-private-permission-fix-2026-05-17-v9

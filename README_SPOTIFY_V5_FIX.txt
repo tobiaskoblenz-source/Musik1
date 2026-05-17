@@ -16,4 +16,4 @@ Railway Variables:
 APP_URL=https://musik1-production.up.railway.app
 NEXT_PUBLIC_APP_URL=https://musik1-production.up.railway.app
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=deine Client ID
-NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public
+NEXT_PUBLIC_SPOTIFY_SCOPES=user-read-private playlist-read-private playlist-modify-public playlist-modify-private

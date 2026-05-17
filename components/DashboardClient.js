@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'spotify-playlist-add-items-diagnostic-2026-05-17-v7';
+const BUILD_VERSION = 'spotify-scope-private-permission-fix-2026-05-17-v9';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -37,7 +37,7 @@ function getSpotifyConfig() {
   return {
     clientId: process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '',
     redirectUri,
-    scopes: process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public'
+    scopes: process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public playlist-modify-private'
   };
 }
 
@@ -64,6 +64,12 @@ function getTokenScopes(token = getStoredToken()) {
 
 function hasSpotifyScope(scope) {
   return getTokenScopes().includes(scope);
+}
+
+function getMissingSpotifyScopes(token = getStoredToken()) {
+  const scopes = getTokenScopes(token);
+  const required = ['playlist-modify-public', 'playlist-modify-private'];
+  return required.filter((scope) => !scopes.includes(scope));
 }
 
 async function sha256(text) {
@@ -380,8 +386,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       setSpotifyBusy(true);
       const token = getStoredToken();
       if (!isTokenValid(token)) throw new Error('Kein gültiger Spotify Login vorhanden');
-      if (!getTokenScopes(token).includes('playlist-modify-public')) {
-        throw new Error(`Spotify Recht fehlt: playlist-modify-public. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
+      const missingScopes = getMissingSpotifyScopes(token);
+      if (missingScopes.length) {
+        throw new Error(`Spotify Rechte fehlen: ${missingScopes.join(' ')}. Bitte Spotify Logout und Login neu machen. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
       }
       const user = spotifyUser || await spotifyFetch('https://api.spotify.com/v1/me');
       if (!user?.id) throw new Error('Spotify Nutzer-ID konnte nicht geladen werden');
@@ -474,8 +481,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       setSpotifyBusy(true);
       const token = getStoredToken();
       if (!isTokenValid(token)) throw new Error('Kein gültiger Spotify Login vorhanden');
-      if (!getTokenScopes(token).includes('playlist-modify-public')) {
-        throw new Error(`Spotify Recht fehlt: playlist-modify-public. Bitte Spotify Logout und Login neu machen. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
+      const missingScopes = getMissingSpotifyScopes(token);
+      if (missingScopes.length) {
+        throw new Error(`Spotify Rechte fehlen: ${missingScopes.join(' ')}. Bitte Spotify Logout und Login neu machen. Aktuelle Token-Scopes: ${getTokenScopes(token).join(' ') || '-'}`);
       }
       if (!selectedPlaylistId) throw new Error('Bitte erst eine eigene öffentliche Playlist auswählen oder eine neue erstellen');
 
@@ -525,6 +533,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       scopes: config.scopes,
       tokenScopes: getTokenScopes(token).join(' ') || '-',
       modifyPublic: getTokenScopes(token).includes('playlist-modify-public') ? 'OK' : 'FEHLT',
+      modifyPrivate: getTokenScopes(token).includes('playlist-modify-private') ? 'OK' : 'FEHLT',
       token: isTokenValid(token) ? 'Gültig' : token?.access_token ? 'Abgelaufen' : 'Nicht vorhanden'
     };
   }

@@ -39,7 +39,7 @@ export default function SpotifyLoginPage() {
     async function start() {
       try {
         const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '';
-        const scopes = process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public';
+        const scopes = process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public playlist-modify-private';
         if (!clientId) throw new Error('NEXT_PUBLIC_SPOTIFY_CLIENT_ID fehlt bei Railway');
 
         const verifier = randomVerifier();
