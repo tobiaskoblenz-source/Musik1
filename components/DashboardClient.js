@@ -6,6 +6,7 @@ const LOG_KEY = 'dj_wunsch_error_log';
 const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
+const REDIRECT_KEY = 'dj_spotify_redirect_uri';
 
 function badgeClass(status) {
   if (status === 'open') return 'badge badge-live';
@@ -29,10 +30,15 @@ function statusLabel(status) {
 }
 
 function getSpotifyConfig() {
-  const fallbackRedirect = typeof window !== 'undefined' ? `${window.location.origin}/spotify/callback` : '';
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const envAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '';
+  const cleanAppUrl = envAppUrl && !envAppUrl.includes('localhost') ? envAppUrl.replace(/\/$/, '') : '';
+  const baseUrl = origin && !origin.includes('localhost') ? origin : cleanAppUrl;
+  const redirectUri = baseUrl ? `${baseUrl}/api/spotify/callback` : '';
+
   return {
     clientId: process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '',
-    redirectUri: process.env.NEXT_PUBLIC_SPOTIFY_REDIRECT_URI || fallbackRedirect,
+    redirectUri,
     scopes: process.env.NEXT_PUBLIC_SPOTIFY_SCOPES || 'user-read-private playlist-read-private playlist-modify-public'
   };
 }
@@ -258,7 +264,9 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
 
       const verifier = randomString();
       const challenge = await createCodeChallenge(verifier);
+      localStorage.removeItem(REDIRECT_KEY);
       localStorage.setItem(VERIFIER_KEY, verifier);
+      localStorage.setItem(REDIRECT_KEY, config.redirectUri);
 
       const params = new URLSearchParams({
         response_type: 'code',
