@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'compact-inline-buttons-2026-05-22-v31',
+    buildVersion: 'compact-playlist-main-button-2026-05-22-v33',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v31: Im Kompaktmodus sind Wunschkarten kleiner und die Buttons kompakter nebeneinander angeordnet.'
+    note: 'v33: Im Kompaktmodus sind nur Annehmen, Ablehnen und + Playlist direkt sichtbar; weitere Aktionen liegen im Mehr-Menue.'
   });
 }
