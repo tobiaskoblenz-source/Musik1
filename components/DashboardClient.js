@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'compact-half-laptop-2026-05-17-v28';
+const BUILD_VERSION = 'compact-inline-buttons-2026-05-22-v31';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -909,14 +909,14 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           </div>
         </div>
 
-        <div className="request-actions">
-          <button className="btn btn-accept" onClick={() => onStatusChange(item.id, 'accepted')}>Angenommen</button>
-          <button className="btn btn-played" onClick={() => onStatusChange(item.id, 'played')}>Gespielt</button>
-          <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>Zu Spotify</button>
-          <button className="btn btn-secondary" disabled={spotifyBusy} onClick={() => openInSpotify(item)}>Spotify öffnen</button>
-          <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>+ Playlist</button>
-          <button className="btn btn-ghost" onClick={() => onStatusChange(item.id, 'open')}>Zurück auf offen</button>
-          <button className="btn btn-reject" onClick={() => onStatusChange(item.id, 'rejected')}>Ablehnen</button>
+        <div className={compactMode ? 'request-actions compact-inline-actions' : 'request-actions'}>
+          <button className="btn btn-accept" onClick={() => onStatusChange(item.id, 'accepted')}>{compactMode ? 'Annehmen' : 'Angenommen'}</button>
+          <button className="btn btn-played" onClick={() => onStatusChange(item.id, 'played')}>{compactMode ? 'Gespielt' : 'Gespielt'}</button>
+          <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>{compactMode ? 'Zu Spotify' : 'Zu Spotify'}</button>
+          <button className="btn btn-secondary" disabled={spotifyBusy} onClick={() => openInSpotify(item)}>{compactMode ? 'Öffnen' : 'Spotify öffnen'}</button>
+          <button className="btn btn-spotify" disabled={spotifyBusy} onClick={() => addToSpotifyPlaylist(item)}>{compactMode ? 'Playlist' : '+ Playlist'}</button>
+          <button className="btn btn-ghost" onClick={() => onStatusChange(item.id, 'open')}>{compactMode ? 'Offen' : 'Zurück auf offen'}</button>
+          <button className="btn btn-reject" onClick={() => onStatusChange(item.id, 'rejected')}>{compactMode ? 'Ablehnen' : 'Ablehnen'}</button>
         </div>
       </div>
     );

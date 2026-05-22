@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'railway-node20-npm-fix-2026-05-22-v30',
+    buildVersion: 'compact-inline-buttons-2026-05-22-v31',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v27: Kompaktmodus zeigt nur Wunschliste; Suche, Filter und wichtige Einstellungen liegen im Kompakt-Menue.'
+    note: 'v31: Im Kompaktmodus sind Wunschkarten kleiner und die Buttons kompakter nebeneinander angeordnet.'
   });
 }
