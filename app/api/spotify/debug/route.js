@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-railway-node20-npm-fix-2026-05-22-v29',
+    buildVersion: 'railway-node20-npm-fix-2026-05-22-v30',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
