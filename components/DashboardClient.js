@@ -7,7 +7,7 @@ const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'dashboard-spotify-playlist-local-fallback-2026-05-17-v26';
+const BUILD_VERSION = 'compact-half-laptop-2026-05-17-v28';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -108,6 +108,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [compactMode, setCompactMode] = useState(false);
+  const [compactMenuOpen, setCompactMenuOpen] = useState(false);
   const [hideDone, setHideDone] = useState(false);
   const [notice, setNotice] = useState('');
   const [eventName, setEventName] = useState(initialEvent?.name || 'TANZ');
@@ -957,10 +958,16 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   }, [logs, logFilter]);
 
   const debug = spotifyDebugText();
+  const isCompactDashboard = activePage === 'dashboard' && compactMode;
+  const mainClassName = [
+    'page-shell',
+    djMode ? 'dj-fullscreen' : '',
+    isCompactDashboard ? 'compact-half-mode' : ''
+  ].filter(Boolean).join(' ');
 
   return (
-    <main className={djMode ? 'page-shell dj-fullscreen' : 'page-shell'}>
-      <div className="topbar">
+    <main className={mainClassName}>
+      {!isCompactDashboard ? <div className="topbar">
         <div className="topbar-left">
           <div className="logo-box">🎧</div>
           <div>
@@ -976,7 +983,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
           <button className={activePage === 'settings' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('settings')}>Einstellungen</button>
           <button className={activePage === 'errors' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setActivePage('errors')}>Fehler-Log</button>
         </div>
-      </div>
+      </div> : null}
 
       {notice ? <div className="notice">{notice}</div> : null}
 
@@ -1228,7 +1235,65 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         </div>
       ) : null}
       {activePage === 'dashboard' ? (
-        <>
+        compactMode ? (
+          <>
+            <div className="compact-live-bar panel panel-pad">
+              <div className="compact-live-title">
+                <strong>DJ Kompakt</strong>
+                <span>{filtered.length} Wünsche · Gäste {guestPageStatus} · Spotify {spotifyConnected ? 'OK' : 'aus'} · Laptop-Hälfte optimiert</span>
+              </div>
+              <button className={compactMenuOpen ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setCompactMenuOpen((v) => !v)}>
+                {compactMenuOpen ? 'Menü schließen' : 'Menü öffnen'}
+              </button>
+            </div>
+
+            {compactMenuOpen ? (
+              <div className="panel panel-pad compact-settings-menu">
+                <div className="section-head">
+                  <h2 className="section-title">Kompakt-Menü</h2>
+                  <span className="badge badge-soft">Alles Wichtige</span>
+                </div>
+
+                <div className="compact-menu-grid">
+                  <button className="quick-menu-btn" onClick={() => setActivePage('spotify')}><span>Spotify-Seite</span><b>Öffnen</b></button>
+                  <button className="quick-menu-btn" onClick={() => setActivePage('settings')}><span>Einstellungen</span><b>Öffnen</b></button>
+                  <button className="quick-menu-btn" onClick={() => setActivePage('errors')}><span>Fehler-Log</span><b>{logStats.error}</b></button>
+                  <button className={guestPageStatus === 'EIN' ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleGuestPage}><span>Gäste-Seite</span><b>{guestPageStatus}</b></button>
+                  <button className={autoPlaylist ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={() => setAutoPlaylist((v) => !v)}><span>Auto-Playlist</span><b>{autoPlaylist ? 'EIN' : 'AUS'}</b></button>
+                  <button className={soundEnabled ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleSound}><span>Signalton</span><b>{soundEnabled ? 'EIN' : 'AUS'}</b></button>
+                  <button className="quick-menu-btn active" onClick={() => setCompactMode(false)}><span>Kompaktmodus</span><b>AUS</b></button>
+                </div>
+
+                <div className="compact-menu-section">
+                  <label className="label">Suche</label>
+                  <input className="input search-input" placeholder="Song, Artist oder Gast suchen..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+
+                <div className="filter-row filter-pills compact-filter-pills">
+                  {filterButtons.map(([key, label, count]) => (
+                    <button key={key} className={filter === key ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setFilter(key)}>
+                      {label} <span className="btn-count">{count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="compact-menu-section compact-playlist-mini">
+                  <div className="info-row"><span>Playlist</span><span>{selectedPlaylist?.name || 'keine gewählt'}</span></div>
+                  <div className="filter-row" style={{ marginTop: 10 }}>
+                    <button className="btn btn-secondary" disabled={!spotifyConnected || !selectedPlaylistId || playlistItemsLoading} onClick={() => loadSpotifyPlaylistItems(true)}>{playlistItemsLoading ? 'Lädt...' : 'Playlist laden'}</button>
+                    <button className="btn btn-secondary" disabled={!selectedPlaylistId} onClick={openSelectedPlaylist}>Spotify öffnen</button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="request-list compact-only-list">
+              {filtered.map((item) => renderRequestCard(item))}
+              {filtered.length === 0 ? <div className="empty-column">Keine Wünsche in diesem Filter.</div> : null}
+            </div>
+          </>
+        ) : (
+          <>
           <div className="dashboard-hero panel panel-pad">
             <div>
               <div className="eyebrow">Live-Übersicht</div>
@@ -1332,6 +1397,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
             </div>
           </div>
         </>
+        )
       ) : null}
     </main>
   );

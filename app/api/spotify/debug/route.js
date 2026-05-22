@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    buildVersion: 'dashboard-spotify-playlist-local-fallback-2026-05-17-v26',
+    buildVersion: 'compact-dashboard-menu-2026-05-17-v27',
     redirectUri: 'https://musik1-production.up.railway.app/api/spotify/callback',
     appUrl: process.env.APP_URL || '',
     nextPublicAppUrl: process.env.NEXT_PUBLIC_APP_URL || '',
@@ -12,6 +12,6 @@ export async function GET() {
     loginApi: '/api/spotify/login',
     loginApiAlt: '/api/spotify-login',
     loginPage: '/spotify/login',
-    note: 'v25: Spotify Playlist im Dashboard als einklappbare Box mit Neu laden und Spotify oeffnen.'
+    note: 'v27: Kompaktmodus zeigt nur Wunschliste; Suche, Filter und wichtige Einstellungen liegen im Kompakt-Menue.'
   });
 }

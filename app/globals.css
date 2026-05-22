@@ -265,3 +265,145 @@ a{color:inherit;text-decoration:none}button,input{font:inherit}
 .playlist-track-row{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,.8fr);gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
 .playlist-track-row:last-child{border-bottom:0}.playlist-track-row span{width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(30,215,96,.12);border:1px solid rgba(30,215,96,.20);color:#bbf7d0;font-weight:900;font-size:12px}.playlist-track-row strong,.playlist-track-row small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playlist-track-row strong{font-size:14px;color:#fff}.playlist-track-row small{font-size:13px;color:rgba(255,255,255,.62)}
 @media (max-width:980px){.playlist-dashboard-grid{grid-template-columns:1fr}.playlist-actions-card{justify-content:stretch}.playlist-actions-card .btn{flex:1 1 150px}.playlist-track-row{grid-template-columns:34px minmax(0,1fr);gap:8px}.playlist-track-row small{grid-column:2;color:rgba(255,255,255,.58)}}
+
+
+/* v27: Kompaktmodus zeigt nur Wünsche, alles Weitere im Menü */
+.compact-live-bar{
+  position:sticky;
+  top:12px;
+  z-index:30;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+  border-radius:22px;
+  background:rgba(2,6,23,.82);
+  border-color:rgba(34,211,238,.18);
+  box-shadow:0 18px 60px rgba(0,0,0,.26);
+}
+.compact-live-title{display:flex;flex-direction:column;gap:4px;min-width:0}.compact-live-title strong{font-size:18px;letter-spacing:-.02em}.compact-live-title span{font-size:13px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compact-settings-menu{margin-bottom:14px;border-color:rgba(34,211,238,.16);background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.035));}
+.compact-menu-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.compact-menu-section{margin-top:14px}.compact-filter-pills{margin-top:12px}.compact-playlist-mini{padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.compact-only-list{padding-bottom:40px}.compact-only-list .request-card{margin:0}.compact-only-list .request-card.compact .spotify-info-line{display:none}.compact-only-list .request-card.compact .request-submeta{font-size:11px}.compact-only-list .request-card.compact .request-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.compact-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.compact-only-list .request-card.compact .request-actions{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.compact-live-bar{top:8px;align-items:stretch;flex-direction:column}.compact-live-bar .btn{width:100%;justify-content:center}.compact-live-title span{white-space:normal}.compact-menu-grid{grid-template-columns:1fr}.compact-filter-pills{display:grid;grid-template-columns:1fr}.compact-filter-pills .btn{width:100%;justify-content:center}.compact-only-list .request-card.compact .request-actions{grid-template-columns:1fr}.compact-only-list .request-card.compact .request-cover{display:none}.compact-only-list .request-card.compact .request-title{font-size:20px}}
+
+/* v28: Kompaktmodus für halben 15,6-Zoll-Laptop-Bildschirm optimiert */
+.page-shell.compact-half-mode{
+  max-width:none;
+  width:100%;
+  padding:8px 8px 18px;
+}
+.compact-half-mode .compact-live-bar{
+  top:6px;
+  margin-bottom:8px;
+  padding:10px 12px;
+  border-radius:18px;
+}
+.compact-half-mode .compact-live-title strong{font-size:16px}
+.compact-half-mode .compact-live-title span{font-size:11px;color:rgba(255,255,255,.55)}
+.compact-half-mode .compact-live-bar .btn{min-height:36px;padding:8px 11px;border-radius:13px;font-size:12px}
+.compact-half-mode .compact-only-list{gap:8px;padding-bottom:18px}
+.compact-half-mode .compact-only-list .request-card.compact{
+  padding:10px;
+  border-radius:17px;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-head{
+  flex-direction:row;
+  align-items:flex-start;
+  gap:8px;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-main{
+  min-width:0;
+  gap:8px;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-cover{
+  width:42px;
+  height:42px;
+  flex-basis:42px;
+  border-radius:12px;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-title-row{
+  gap:5px;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-title{
+  font-size:16px;
+  line-height:1.14;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-meta{
+  font-size:13px;
+  margin-top:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.compact-half-mode .compact-only-list .request-card.compact .request-submeta{
+  margin-top:4px;
+  font-size:10px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.compact-half-mode .compact-only-list .request-card.compact .badge{
+  font-size:10px;
+  padding:4px 6px;
+}
+.compact-half-mode .compact-only-list .request-tools{
+  width:auto;
+  flex:0 0 auto;
+  gap:6px;
+}
+.compact-half-mode .compact-only-list .request-id{display:none}
+.compact-half-mode .compact-only-list .btn-icon{
+  width:32px;
+  min-width:32px;
+  height:32px;
+  padding:0;
+  border-radius:12px;
+}
+.compact-half-mode .compact-only-list .request-actions{
+  margin-top:8px;
+  gap:6px;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.compact-half-mode .compact-only-list .request-actions .btn{
+  min-height:34px;
+  padding:7px 8px;
+  border-radius:12px;
+  font-size:11px;
+  line-height:1.1;
+  width:100%;
+  justify-content:center;
+}
+.compact-half-mode .compact-settings-menu{
+  margin-bottom:8px;
+  padding:12px;
+  border-radius:18px;
+}
+.compact-half-mode .compact-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.compact-half-mode .quick-menu-btn{min-height:42px;padding:9px 10px;border-radius:14px}
+.compact-half-mode .quick-menu-btn span{font-size:11px}.compact-half-mode .quick-menu-btn b{font-size:12px}
+.compact-half-mode .compact-menu-section{margin-top:10px}
+.compact-half-mode .input{min-height:38px;padding:9px 10px;border-radius:13px;font-size:13px}
+.compact-half-mode .compact-filter-pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.compact-half-mode .compact-filter-pills .btn{font-size:11px;min-height:34px;padding:7px 8px}
+@media (max-width:760px){
+  .compact-half-mode .compact-only-list .request-card.compact .request-cover{display:none}
+  .compact-half-mode .compact-only-list .request-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (max-width:520px){
+  .compact-half-mode{padding:7px}
+  .compact-half-mode .compact-live-bar{align-items:stretch;flex-direction:column}
+  .compact-half-mode .compact-live-title span{white-space:normal}
+  .compact-half-mode .compact-only-list .request-card.compact .request-head{flex-direction:column}
+  .compact-half-mode .compact-only-list .request-tools{width:100%;justify-content:flex-end}
+  .compact-half-mode .compact-only-list .request-actions{grid-template-columns:1fr 1fr!important}
+}
