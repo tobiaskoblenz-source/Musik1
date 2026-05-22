@@ -6,8 +6,9 @@ const LOG_KEY = 'dj_wunsch_error_log';
 const TOKEN_KEY = 'dj_spotify_token';
 const VERIFIER_KEY = 'dj_spotify_code_verifier';
 const PLAYLIST_KEY = 'dj_spotify_public_playlist';
+const HIDDEN_PLAYLIST_REQUESTS_KEY = 'dj_hidden_playlist_requests';
 const REDIRECT_KEY = 'dj_spotify_redirect_uri';
-const BUILD_VERSION = 'compact-playlist-main-button-2026-05-22-v33';
+const BUILD_VERSION = 'compact-calm-autohide-playlist-2026-05-22-v34';
 
 const CLOSED_MESSAGE_PRESETS = [
   'Heute keine Musikwünsche mehr. Danke fürs Feiern!',
@@ -109,6 +110,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
   const [filter, setFilter] = useState('all');
   const [compactMode, setCompactMode] = useState(false);
   const [compactMenuOpen, setCompactMenuOpen] = useState(false);
+  const [playlistHiddenRequestIds, setPlaylistHiddenRequestIds] = useState(new Set());
   const [hideDone, setHideDone] = useState(false);
   const [notice, setNotice] = useState('');
   const [eventName, setEventName] = useState(initialEvent?.name || 'TANZ');
@@ -147,6 +149,8 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       setSoundEnabled(savedSound);
       soundEnabledRef.current = savedSound;
       setPlayedBottomEnabled(localStorage.getItem('dj_played_bottom_enabled') !== 'false');
+      const hiddenPlaylistIds = JSON.parse(localStorage.getItem(HIDDEN_PLAYLIST_REQUESTS_KEY) || '[]');
+      setPlaylistHiddenRequestIds(new Set(hiddenPlaylistIds.map(String)));
       setSpotifyInfoEnhanced(localStorage.getItem('dj_spotify_info_enhanced') !== 'false');
     } catch {}
     refreshSpotifyStatus(false);
@@ -239,6 +243,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     return [...requests]
       .filter((r) => {
         if (hideDone && (r.status === 'played' || r.status === 'rejected')) return false;
+        if (compactMode && playlistHiddenRequestIds.has(String(r.id))) return false;
         if (filter === 'all') return true;
         if (filter === 'spotify') return Boolean(r.spotify_track_uri || r.spotify_url);
         return r.status === filter;
@@ -255,7 +260,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
         }
         return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
       });
-  }, [requests, search, filter, playedBottomEnabled]);
+  }, [requests, search, filter, playedBottomEnabled, hideDone, compactMode, playlistHiddenRequestIds]);
 
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
   const lastPlaylistLog = logs.find((log) => log.area.toLowerCase().includes('spotify playlist') && log.type !== 'error' && log.message.toLowerCase().includes('hinzugefügt'));
@@ -828,6 +833,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
       }, ...prev.filter((entry) => entry.uri !== track.uri)].slice(0, 20));
       setPlaylistTotal((prev) => typeof prev === 'number' ? prev + 1 : 1);
       await onStatusChange(item.id, 'accepted', { skipAutoPlaylist: true });
+      hideRequestAfterPlaylist(item.id);
       addLog('Wunsch-Status', 'Nach Spotify automatisch auf Angenommen gesetzt', 'info', `${buildQuery(item)} | ID: ${item.id}`);
       flash('Zur Spotify Playlist hinzugefügt und als angenommen markiert');
     } catch (error) {
@@ -846,6 +852,23 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
     } finally {
       setSpotifyBusy(false);
     }
+  }
+
+
+  function hideRequestAfterPlaylist(id) {
+    if (!compactMode) return;
+    setPlaylistHiddenRequestIds((prev) => {
+      const next = new Set(prev);
+      next.add(String(id));
+      try { localStorage.setItem(HIDDEN_PLAYLIST_REQUESTS_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  function showPlaylistHiddenRequests() {
+    setPlaylistHiddenRequestIds(new Set());
+    try { localStorage.removeItem(HIDDEN_PLAYLIST_REQUESTS_KEY); } catch {}
+    flash('Ausgeblendete Playlist-Wünsche wieder sichtbar');
   }
 
   function spotifyQuality(item) {
@@ -1277,6 +1300,7 @@ export default function DashboardClient({ initialRequests = [], initialEvent }) 
                   <button className={guestPageStatus === 'EIN' ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleGuestPage}><span>Gäste-Seite</span><b>{guestPageStatus}</b></button>
                   <button className={autoPlaylist ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={() => setAutoPlaylist((v) => !v)}><span>Auto-Playlist</span><b>{autoPlaylist ? 'EIN' : 'AUS'}</b></button>
                   <button className={soundEnabled ? 'quick-menu-btn active' : 'quick-menu-btn'} onClick={toggleSound}><span>Signalton</span><b>{soundEnabled ? 'EIN' : 'AUS'}</b></button>
+                  <button className="quick-menu-btn" onClick={showPlaylistHiddenRequests}><span>Ausgeblendete</span><b>{playlistHiddenRequestIds.size}</b></button>
                   <button className="quick-menu-btn active" onClick={() => setCompactMode(false)}><span>Kompaktmodus</span><b>AUS</b></button>
                 </div>
 
